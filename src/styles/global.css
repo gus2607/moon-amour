@@ -1,0 +1,664 @@
+/* ============ TOKENS ============ */
+:root{
+  --dusk-950:#160f24;
+  --dusk-900:#1d1330;
+  --dusk-800:#2b1a3d;
+  --dusk-700:#3d2249;
+  --dusk-600:#5a2f4d;
+  --mauve-500:#8a4360;
+  --rose-500:#c9556b;
+  --rose-300:#e08a8f;
+  --amber-500:#e8935b;
+  --amber-300:#f2b581;
+  --amber-200:#f4c895;
+  --gold-100:#f9dfae;
+  --parchment:#f6ecdc;
+  --parchment-dim:#ece0cc;
+  --ink:#2a1b22;
+  --ink-soft:#5a4450;
+  --line:rgba(246,236,217,0.18);
+
+  --font-display:"Fraunces", ui-serif, Georgia, serif;
+  --font-body:"Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-hand:"Caveat", cursive;
+
+  --radius-sm:16px;
+  --radius-md:22px;
+  --radius-lg:30px;
+  --radius-pill:999px;
+  --glass-bg:rgba(246,236,217,0.08);
+  --glass-border:rgba(255,255,255,0.14);
+  --glass-shadow:0 20px 50px rgba(10,6,16,0.45);
+
+  background:var(--dusk-950);
+  color-scheme: dark;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  color:var(--parchment);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+img{max-width:100%;display:block;}
+
+h1,h2,h3{
+  font-family:var(--font-display);
+  text-wrap:balance;
+  margin:0;
+  line-height:1.05;
+}
+p{ margin:0; }
+
+.wrap{
+  position:relative;
+  z-index:1;
+  max-width:920px;
+  margin:0 auto;
+  padding:0 clamp(20px,5vw,48px);
+}
+
+/* ============ THREE BACKGROUND ============ */
+/* WebGL canvas: Van Gogh paintings crossfading into each other with gold
+   dust drifting in front. Sits above the flat scroll-color layer (z-index
+   -2) and below every section. Fully opaque so the flat color layer never
+   tints the paintings. */
+.three-background{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  width:100vw;
+  height:100vh;
+  pointer-events:none;
+  opacity:1;
+}
+
+/* Thin edge darkening only (not a full wash) so section text stays readable
+   without hiding the painting underneath. Sits in the same z slot as the
+   canvas, immediately after it in the DOM, so it paints on top of it and
+   below every section's own content. */
+.painting-vignette{
+  position:fixed;
+  inset:0;
+  z-index:-1;
+  pointer-events:none;
+  background:
+    linear-gradient(180deg, rgba(10,6,16,0.4) 0%, rgba(10,6,16,0) 14%, rgba(10,6,16,0) 86%, rgba(10,6,16,0.45) 100%);
+}
+
+/* ============ CURSOR ============ */
+/* Her favorite flower, as the pointer — desktop/mouse only, never on
+   touch devices where there's no cursor to see anyway. */
+@media (hover:hover) and (pointer:fine){
+  html{
+    cursor:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2228%22%20height%3D%2228%22%20viewBox%3D%220%200%2028%2028%22%3E%3Ctext%20x%3D%2214%22%20y%3D%2221%22%20font-size%3D%2224%22%20text-anchor%3D%22middle%22%3E%F0%9F%8C%BB%3C%2Ftext%3E%3C%2Fsvg%3E") 14 14, auto;
+  }
+  *{ cursor:inherit; }
+}
+
+.eyebrow{
+  font-family:var(--font-body);
+  font-size:0.78rem;
+  letter-spacing:0.16em;
+  text-transform:uppercase;
+  font-weight:600;
+  opacity:0.75;
+}
+
+.measure{ max-width:62ch; }
+
+/* ============ REVEAL ============ */
+.reveal{
+  transform:translateY(14px);
+  opacity:0.001;
+  transition:transform 0.8s cubic-bezier(.2,.7,.2,1), opacity 0.9s ease;
+}
+.reveal.in-view{
+  transform:translateY(0);
+  opacity:1;
+}
+@media (prefers-reduced-motion: reduce){
+  .reveal{ transition:none; transform:none; opacity:1; }
+}
+
+/* ============ HERO ============ */
+.hero{
+  position:relative;
+  min-height:100svh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:96px 0 64px;
+  background-color:transparent;
+  background-image:radial-gradient(120% 70% at 50% 0%, rgba(232,147,91,0.20), transparent 60%);
+  overflow:hidden;
+}
+.hero .wrap{ position:relative; z-index:2; }
+.hero-eyebrow{ color:var(--gold-100); }
+.hero h1{
+  font-size:clamp(2.4rem, 6vw, 4.4rem);
+  font-weight:600;
+  font-style:italic;
+  color:var(--parchment);
+  margin-top:18px;
+  max-width:15ch;
+}
+.hero-sub{
+  margin-top:22px;
+  font-size:clamp(1.02rem,1.6vw,1.2rem);
+  color:var(--parchment-dim);
+  max-width:46ch;
+}
+
+.counter{
+  margin-top:44px;
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:clamp(10px,2vw,20px);
+  max-width:560px;
+}
+.counter-cell{
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  border-top-color:rgba(255,255,255,0.28);
+  border-radius:var(--radius-md);
+  padding:16px 8px;
+  text-align:center;
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  box-shadow:0 12px 30px rgba(10,6,16,0.3);
+  transition:transform 0.35s cubic-bezier(.2,.7,.2,1), box-shadow 0.35s ease;
+}
+@media (hover:hover){
+  .counter-cell:hover{
+    transform:translateY(-3px);
+    box-shadow:0 18px 40px rgba(10,6,16,0.4);
+  }
+}
+@media (prefers-reduced-transparency: reduce){
+  .counter-cell{ background:var(--dusk-800); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+.counter-num{
+  font-family:var(--font-display);
+  font-variant-numeric:tabular-nums;
+  font-size:clamp(1.5rem,3.4vw,2.1rem);
+  font-weight:600;
+  color:var(--gold-100);
+  display:block;
+}
+.counter-label{
+  font-size:0.68rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--parchment-dim);
+  opacity:0.85;
+}
+.counter-note{
+  margin-top:16px;
+  font-size:0.9rem;
+  color:var(--parchment-dim);
+  opacity:0.85;
+}
+
+.scroll-cue{
+  position:relative;
+  z-index:2;
+  margin:56px auto 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  font-size:0.78rem;
+  letter-spacing:0.1em;
+  text-transform:uppercase;
+  color:var(--parchment-dim);
+}
+.scroll-cue .heart{
+  width:18px; height:17px;
+  fill:var(--rose-300);
+  animation:heartbeat 1.7s ease-in-out infinite;
+}
+@keyframes heartbeat{
+  0%,100%{ transform:scale(1); opacity:0.55; }
+  25%{ transform:scale(1.18); opacity:1; }
+  40%{ transform:scale(0.98); opacity:0.85; }
+}
+@media (prefers-reduced-motion: reduce){ .scroll-cue .heart{ animation:none; opacity:0.85; } }
+
+/* ============ CHAPTERS ============ */
+.chapter{
+  position:relative;
+  padding:clamp(72px,10vw,120px) 0;
+}
+.chapter-num{
+  font-family:var(--font-display);
+  font-size:0.85rem;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  color:var(--amber-300);
+  font-weight:600;
+}
+.chapter h2{
+  font-size:clamp(1.9rem,4.4vw,3rem);
+  font-weight:600;
+  font-style:italic;
+  margin-top:10px;
+  color:var(--parchment);
+}
+.chapter-lede{
+  margin-top:20px;
+  font-size:clamp(1rem,1.5vw,1.12rem);
+  line-height:1.65;
+  color:var(--parchment-dim);
+}
+
+.beat{
+  margin-top:32px;
+  padding:26px clamp(20px,3vw,32px);
+  border-radius:var(--radius-lg);
+  border:1px solid var(--glass-border);
+  border-top-color:rgba(255,255,255,0.22);
+  background:var(--glass-bg);
+  backdrop-filter:blur(14px) saturate(150%);
+  -webkit-backdrop-filter:blur(14px) saturate(150%);
+  box-shadow:var(--glass-shadow);
+}
+@media (prefers-reduced-transparency: reduce){
+  .beat{ background:var(--dusk-800); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+.beat + .beat{ margin-top:20px; }
+.beat-label{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:0.78rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--rose-300);
+}
+.beat p{
+  margin-top:10px;
+  line-height:1.7;
+  color:var(--parchment-dim);
+  font-size:1.02rem;
+}
+
+.tagrow{
+  margin-top:28px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.tag{
+  font-size:0.85rem;
+  padding:8px 18px;
+  border-radius:var(--radius-pill);
+  border:1px solid var(--glass-border);
+  color:var(--gold-100);
+  background:rgba(232,147,91,0.1);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+/* chapter backgrounds now come from the fixed scroll-driven color layer
+   (see ScrollBackground.jsx + model/backgroundStops.js) — these variants
+   only keep the decorative accents that layer on top of it. */
+.chapter--pause{
+  padding-top:clamp(90px,12vw,140px);
+  padding-bottom:clamp(90px,12vw,140px);
+}
+.chapter--pause .chapter-lede{ max-width:56ch; }
+.stars{
+  position:absolute; inset:0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%, rgba(246,236,217,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 78% 14%, rgba(246,236,217,0.4), transparent),
+    radial-gradient(1px 1px at 40% 60%, rgba(246,236,217,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 90% 70%, rgba(246,236,217,0.35), transparent),
+    radial-gradient(1px 1px at 25% 80%, rgba(246,236,217,0.3), transparent),
+    radial-gradient(1.5px 1.5px at 60% 35%, rgba(246,236,217,0.4), transparent);
+  pointer-events:none;
+}
+.chapter--sunset{
+  background-image:radial-gradient(120% 60% at 50% 100%, rgba(249,223,174,0.25), transparent 60%);
+  padding-bottom:calc(clamp(72px,10vw,120px) + 130px);
+}
+
+/* ============ GALLERY ============ */
+/* Text sits directly on the painting now (the canvas is fully opaque, no
+   flat cream layer behind it) — light parchment + a soft shadow instead of
+   the old dark-ink-on-cream-card treatment, matching every other section. */
+.gallery{
+  position:relative;
+  color:var(--parchment);
+  padding:clamp(72px,10vw,120px) 0;
+}
+.gallery .eyebrow{ color:var(--gold-100); text-shadow:0 2px 10px rgba(10,6,16,0.55); }
+.gallery h2{ color:var(--parchment); text-shadow:0 2px 14px rgba(10,6,16,0.55); }
+.gallery .chapter-lede{ color:var(--parchment-dim); text-shadow:0 2px 10px rgba(10,6,16,0.5); }
+
+/* Single draggable media row (see Gallery.jsx's MediaCarousel) mixing
+   every photo and video. Native horizontal scroll gives touch/trackpad
+   swipe and momentum for free; the pointer handlers add desktop
+   click-drag with its own momentum. The item list is tripled and silently
+   wraps mid-scroll so dragging either direction feels endless. No
+   scroll-snap — snapping to the nearest tile after every scroll fought
+   with the momentum and read as stutter instead of a fluid glide. */
+.media-carousel{
+  margin-top:40px;
+  display:flex;
+  gap:16px;
+  padding:6px clamp(20px,5vw,48px) 18px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  touch-action:pan-x;
+  cursor:grab;
+  scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent);
+  mask-image:linear-gradient(to right, transparent, black 48px, black calc(100% - 48px), transparent);
+}
+.media-carousel:active{ cursor:grabbing; }
+.media-carousel::-webkit-scrollbar{ display:none; }
+
+.media-tile{
+  position:relative;
+  width:clamp(200px,26vw,300px);
+  height:220px;
+  flex:0 0 auto;
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+  box-shadow:0 14px 34px rgba(42,27,34,0.18);
+  transition:transform 0.35s cubic-bezier(.2,.7,.2,1);
+}
+@media (hover:hover){
+  .media-tile:hover{ transform:translateY(-4px) scale(1.015); }
+}
+.media-tile img,
+.media-tile video{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+  pointer-events:none;
+}
+@media (prefers-reduced-motion: reduce){
+  .media-tile{ transition:none; }
+}
+
+/* Animated hint that the media row above is draggable: a small pill track
+   with a thumb that glides side to side on its own, echoing the gesture
+   it's teaching, plus a centered label underneath. */
+.swipe-hint{
+  margin:28px auto 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+.swipe-hint-track{
+  position:relative;
+  width:56px;
+  height:22px;
+  border-radius:var(--radius-pill);
+  background:var(--glass-bg);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+  overflow:hidden;
+}
+.swipe-hint-thumb{
+  position:absolute;
+  top:3px;
+  left:3px;
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  background:var(--gold-100);
+  box-shadow:0 0 10px rgba(249,223,174,0.6);
+  animation:swipeHintGlide 2.4s cubic-bezier(.4,0,.2,1) infinite;
+}
+@keyframes swipeHintGlide{
+  0%,100%{ left:3px; }
+  50%{ left:37px; }
+}
+.swipe-hint-label{
+  font-size:0.82rem;
+  letter-spacing:0.03em;
+  color:var(--parchment-dim);
+  text-shadow:0 2px 8px rgba(10,6,16,0.5);
+  opacity:0.9;
+}
+@media (prefers-reduced-motion: reduce){
+  .swipe-hint-thumb{ animation:none; left:20px; }
+}
+
+/* Upload-a-memory prompt: static site, no backend — files are optimized
+   and stored client-side (see controller/useUploadedMedia.js) and folded
+   straight into the carousel above. */
+.add-memory{
+  margin:36px auto 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+.add-memory-text{
+  font-size:0.95rem;
+  color:var(--parchment-dim);
+  text-shadow:0 2px 8px rgba(10,6,16,0.5);
+  text-align:center;
+}
+.add-memory-btn{
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  border:1px solid var(--glass-border);
+  background:linear-gradient(160deg, var(--amber-300), var(--rose-500));
+  color:var(--parchment);
+  font-family:var(--font-body);
+  font-size:1.6rem;
+  line-height:1;
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  box-shadow:0 12px 30px rgba(10,6,16,0.35);
+  transition:transform 0.2s cubic-bezier(.2,.7,.2,1), box-shadow 0.2s ease;
+}
+.add-memory-btn:active{ transform:scale(0.94); }
+@media (hover:hover){
+  .add-memory-btn:hover{ transform:translateY(-3px); box-shadow:0 16px 36px rgba(10,6,16,0.42); }
+}
+.add-memory-btn:disabled{ cursor:progress; opacity:0.85; }
+.add-memory-spinner{
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  border:2px solid rgba(246,236,217,0.35);
+  border-top-color:var(--parchment);
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion: reduce){
+  .add-memory-btn{ transition:none; }
+  .add-memory-spinner{ animation-duration:1.6s; }
+}
+.file-input-hidden{
+  position:absolute;
+  width:1px; height:1px;
+  padding:0; margin:-1px;
+  overflow:hidden;
+  clip:rect(0,0,0,0);
+  border:0;
+}
+
+/* Success toast after an upload — a small glass pill that rises in and
+   fades out on its own; role="status"/aria-live on its wrapper announces
+   it without stealing focus. */
+.toast-slot{
+  position:fixed;
+  left:50%;
+  bottom:clamp(24px,6vh,48px);
+  transform:translateX(-50%);
+  z-index:20;
+  pointer-events:none;
+}
+.toast{
+  padding:14px 24px;
+  border-radius:var(--radius-pill);
+  background:rgba(29,19,48,0.88);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(16px) saturate(160%);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);
+  color:var(--parchment);
+  font-size:0.92rem;
+  box-shadow:0 16px 40px rgba(10,6,16,0.45);
+  animation:toastIn 0.4s cubic-bezier(.2,.8,.2,1), toastOut 0.4s ease 2.8s forwards;
+}
+@keyframes toastIn{
+  from{ opacity:0; transform:translateY(14px) scale(0.96); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes toastOut{
+  to{ opacity:0; transform:translateY(-10px) scale(0.98); }
+}
+@media (prefers-reduced-motion: reduce){
+  .toast{ animation:none; }
+}
+
+/* ============ LETTER ============ */
+.letter-section{
+  position:relative;
+  padding:clamp(80px,11vw,130px) 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+}
+.envelope{
+  margin-top:40px;
+  width:min(320px, 84vw);
+  aspect-ratio:3/2;
+  position:relative;
+  border:none;
+  background:none;
+  padding:0;
+  font:inherit;
+  cursor:pointer;
+  transition:transform 0.15s ease-out;
+}
+.envelope:active{ transform:scale(0.97); }
+@media (hover:hover){
+  .envelope:hover{ transform:translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce){
+  .envelope{ transition:none; }
+  .envelope:active{ transform:none; }
+}
+.env-body{
+  position:absolute; inset:0;
+  background:linear-gradient(160deg, var(--gold-100), var(--amber-300));
+  border-radius:var(--radius-md);
+  box-shadow:0 18px 40px rgba(0,0,0,0.35);
+}
+.env-flap{
+  position:absolute; top:0; left:0; right:0; height:52%;
+  background:linear-gradient(160deg, var(--amber-200), var(--rose-300));
+  clip-path:polygon(0 0, 100% 0, 50% 100%);
+  border-radius:var(--radius-md) var(--radius-md) 0 0;
+  transform-origin:top;
+  transition:transform 0.6s cubic-bezier(.3,.8,.3,1);
+}
+.envelope[aria-expanded="true"] .env-flap{ transform:rotateX(180deg); }
+.seal{
+  position:absolute; top:38%; left:50%; transform:translate(-50%,-50%);
+  width:46px; height:46px; border-radius:50%;
+  background:var(--rose-500);
+  color:var(--gold-100);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-style:italic; font-size:1.1rem;
+  box-shadow:0 4px 10px rgba(0,0,0,0.3);
+  transition:opacity 0.3s ease, transform 0.3s ease;
+}
+.envelope[aria-expanded="true"] .seal{ opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+.env-hint{
+  margin-top:14px;
+  font-size:0.8rem;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--parchment-dim);
+}
+
+.letter-paper{
+  margin-top:28px;
+  max-width:560px;
+  width:100%;
+  background:var(--parchment);
+  color:var(--ink);
+  border-radius:var(--radius-lg);
+  padding:clamp(28px,5vw,44px);
+  text-align:left;
+  box-shadow:0 24px 60px rgba(0,0,0,0.35);
+  display:grid;
+  gap:16px;
+  max-height:0;
+  overflow:hidden;
+  opacity:0;
+  transition:max-height 0.7s ease, opacity 0.6s ease, padding 0.7s ease;
+}
+.letter-paper.open{
+  max-height:900px;
+  opacity:1;
+}
+.letter-paper p{
+  font-family:var(--font-hand);
+  font-size:1.35rem;
+  line-height:1.5;
+  color:var(--ink);
+}
+.letter-sign{
+  font-family:var(--font-hand);
+  font-size:1.5rem;
+  color:var(--mauve-500);
+  text-align:right;
+}
+
+/* ============ CLOSING ============ */
+.closing{
+  position:relative;
+  padding:clamp(90px,12vw,140px) 0 210px;
+  text-align:center;
+  overflow:hidden;
+}
+.closing h2{
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-style:italic;
+  color:var(--parchment);
+}
+.closing p.measure{
+  margin:20px auto 0;
+  color:var(--parchment-dim);
+  line-height:1.7;
+}
+.next-anniv{
+  margin:36px auto 0;
+  display:inline-flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.signature{
+  margin-top:52px;
+  font-family:var(--font-hand);
+  font-size:1.7rem;
+  color:var(--gold-100);
+}
+.made-with{
+  margin-top:10px;
+  font-size:0.78rem;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--parchment-dim);
+  opacity:0.75;
+}
