@@ -58,6 +58,7 @@ p{ margin:0; }
   max-width:920px;
   margin:0 auto;
   padding:0 clamp(20px,5vw,48px);
+  text-align:center;
 }
 
 /* ============ THREE BACKGROUND ============ */
@@ -142,18 +143,18 @@ p{ margin:0; }
   font-weight:600;
   font-style:italic;
   color:var(--parchment);
-  margin-top:18px;
+  margin:18px auto 0;
   max-width:15ch;
 }
 .hero-sub{
-  margin-top:22px;
+  margin:22px auto 0;
   font-size:clamp(1.02rem,1.6vw,1.2rem);
   color:var(--parchment-dim);
   max-width:46ch;
 }
 
 .counter{
-  margin-top:44px;
+  margin:44px auto 0;
   display:grid;
   grid-template-columns:repeat(4,1fr);
   gap:clamp(10px,2vw,20px);
@@ -288,6 +289,7 @@ p{ margin:0; }
   margin-top:28px;
   display:flex;
   flex-wrap:wrap;
+  justify-content:center;
   gap:10px;
 }
 .tag{
@@ -308,7 +310,7 @@ p{ margin:0; }
   padding-top:clamp(90px,12vw,140px);
   padding-bottom:clamp(90px,12vw,140px);
 }
-.chapter--pause .chapter-lede{ max-width:56ch; }
+.chapter--pause .chapter-lede{ max-width:56ch; margin-inline:auto; }
 .stars{
   position:absolute; inset:0;
   background-image:
@@ -322,7 +324,16 @@ p{ margin:0; }
 }
 .chapter--sunset{
   background-image:radial-gradient(120% 60% at 50% 100%, rgba(249,223,174,0.25), transparent 60%);
-  padding-bottom:calc(clamp(72px,10vw,120px) + 130px);
+}
+
+/* "+" right below Chapter 5 that opens DiaryPrompt's modal. */
+.diary-prompt{
+  position:relative;
+  z-index:2;
+  display:flex;
+  justify-content:center;
+  margin-top:-40px;
+  padding-bottom:clamp(72px,10vw,120px);
 }
 
 /* ============ GALLERY ============ */
@@ -383,6 +394,29 @@ p{ margin:0; }
 }
 @media (prefers-reduced-motion: reduce){
   .media-tile{ transition:none; }
+}
+
+/* Uploaded PDFs/docs can't render as an <img>/<video>, so they get a
+   simple icon + filename card instead, same tile footprint as a photo. */
+.media-doc{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:20px;
+  background:var(--dusk-800);
+  color:var(--parchment-dim);
+}
+.media-doc-icon{ width:40px; height:40px; flex-shrink:0; }
+.media-doc-name{
+  font-size:0.82rem;
+  text-align:center;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
 }
 
 /* Animated hint that the media row above is draggable: a small pill track
@@ -527,6 +561,72 @@ p{ margin:0; }
   .toast{ animation:none; }
 }
 
+/* ============ MODAL (DiaryPrompt) ============ */
+.modal-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:30;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(10,6,16,0.6);
+  backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+  animation:modalBackdropIn 0.25s ease;
+}
+@keyframes modalBackdropIn{
+  from{ opacity:0; }
+  to{ opacity:1; }
+}
+.modal{
+  position:relative;
+  width:min(440px, 100%);
+  padding:clamp(28px,5vw,40px);
+  border-radius:var(--radius-lg);
+  background:var(--dusk-800);
+  border:1px solid var(--glass-border);
+  box-shadow:0 30px 70px rgba(10,6,16,0.55);
+  text-align:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+  animation:modalIn 0.35s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes modalIn{
+  from{ opacity:0; transform:translateY(16px) scale(0.97); }
+  to{ opacity:1; transform:translateY(0) scale(1); }
+}
+.modal-close{
+  position:absolute;
+  top:14px; right:14px;
+  width:32px; height:32px;
+  border-radius:50%;
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  color:var(--parchment);
+  font-size:1.2rem;
+  line-height:1;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.modal-title{
+  font-size:clamp(1.3rem,3vw,1.6rem);
+  font-style:italic;
+  color:var(--parchment);
+}
+.modal-message{
+  font-size:1rem;
+  line-height:1.6;
+  color:var(--parchment-dim);
+}
+@media (prefers-reduced-motion: reduce){
+  .modal-backdrop, .modal{ animation:none; }
+}
+
 /* ============ LETTER ============ */
 .letter-section{
   position:relative;
@@ -598,7 +698,7 @@ p{ margin:0; }
   color:var(--ink);
   border-radius:var(--radius-lg);
   padding:clamp(28px,5vw,44px);
-  text-align:left;
+  text-align:center;
   box-shadow:0 24px 60px rgba(0,0,0,0.35);
   display:grid;
   gap:16px;
@@ -621,7 +721,7 @@ p{ margin:0; }
   font-family:var(--font-hand);
   font-size:1.5rem;
   color:var(--mauve-500);
-  text-align:right;
+  text-align:center;
 }
 
 /* ============ CLOSING ============ */

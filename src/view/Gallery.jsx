@@ -1,41 +1,17 @@
-import { forwardRef, memo, useEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, memo, useEffect, useMemo, useRef } from "react";
 import Reveal from "./Reveal.jsx";
-import { useUploadedMedia } from "../controller/useUploadedMedia.js";
+import UploadButton from "./UploadButton.jsx";
 
-const Gallery = forwardRef(function Gallery({ content }, ref) {
-  const { items: uploaded, addFiles, uploading } = useUploadedMedia();
-  const [toast, setToast] = useState(null);
-  const fileInputRef = useRef(null);
-  const toastTimerRef = useRef(null);
-
+const Gallery = forwardRef(function Gallery({ content, uploaded, onUpload, uploading }, ref) {
   const allSlots = useMemo(() => {
     const uploadedSlots = uploaded.map((u) => ({
       id: u.id,
       type: u.type,
       src: u.url,
-      caption: "Un recuerdo que añadiste",
+      caption: u.type === "document" ? u.name : "Un recuerdo que añadiste",
     }));
     return [...content.slots, ...uploadedSlots];
   }, [content.slots, uploaded]);
-
-  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
-
-  async function onFilesChosen(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    // Resetting the input's value invalidates the picked File's data for
-    // any *new* read started afterward (confirmed: File.arrayBuffer() and
-    // an <img> decode both succeed before the reset, then a fresh read
-    // after it just hangs) — so the reset happens only once every read is
-    // already done, not before.
-    const { added } = await addFiles(files);
-    e.target.value = ""; // lets the same file be picked again later
-    if (added > 0) {
-      clearTimeout(toastTimerRef.current);
-      setToast(added === 1 ? "Recuerdo subido con éxito" : `${added} recuerdos subidos con éxito`);
-      toastTimerRef.current = setTimeout(() => setToast(null), 3200);
-    }
-  }
 
   return (
     <section ref={ref} className="gallery">
@@ -60,28 +36,13 @@ const Gallery = forwardRef(function Gallery({ content }, ref) {
 
       <Reveal as="div" className="add-memory">
         <p className="add-memory-text">¿Quieres añadir más de nuestros momentos?</p>
-        <button
-          type="button"
-          className="add-memory-btn"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          aria-label="Añadir fotos o videos"
-        >
-          {uploading ? <span className="add-memory-spinner" aria-hidden="true" /> : "+"}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
+        <UploadButton
+          onUpload={onUpload}
+          uploading={uploading}
           accept="image/*,video/*"
-          multiple
-          className="file-input-hidden"
-          onChange={onFilesChosen}
+          label="Añadir fotos o videos"
         />
       </Reveal>
-
-      <div className="toast-slot" aria-live="polite">
-        {toast && <div className="toast">{toast}</div>}
-      </div>
     </section>
   );
 });
@@ -226,9 +187,9 @@ function MediaCarousel({ items }) {
 }
 
 function MediaTile({ slot, ...rest }) {
-  return (
-    <div className="media-tile" {...rest}>
-      {slot.type === "video" ? (
+  if (slot.type === "video") {
+    return (
+      <div className="media-tile" {...rest}>
         <video
           src={slot.src}
           muted
@@ -239,9 +200,29 @@ function MediaTile({ slot, ...rest }) {
           draggable="false"
           aria-label={slot.caption}
         />
-      ) : (
-        <img src={slot.src} alt={slot.caption} loading="lazy" draggable="false" />
-      )}
+      </div>
+    );
+  }
+  if (slot.type === "document") {
+    return (
+      <div className="media-tile media-doc" {...rest}>
+        <svg className="media-doc-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M6 2h9l5 5v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+          <path d="M14 2v5h5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+        </svg>
+        <span className="media-doc-name">{slot.caption}</span>
+      </div>
+    );
+  }
+  return (
+    <div className="media-tile" {...rest}>
+      <img src={slot.src} alt={slot.caption} loading="lazy" draggable="false" />
     </div>
   );
 }

@@ -152,5 +152,5 @@ export const closing = {
   body: "Del colegio al Valle de Cocora, de las gradas a esta página. Lo que sigue todavía no está escrito, y esa es la mejor parte: lo vamos a escribir juntos, un amanecer a la vez.",
   counterNote: "Para nuestro próximo 7 de marzo.",
   signature: "Con todo mi amor, Gustavo.",
-  madeWith: "Para mi amorcito, hoy",
+  madeWith: "Para mi amorcito",
 };

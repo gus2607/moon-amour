@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { ANNIVERSARY, NEXT_ANNIVERSARY } from "./model/dates.js";
 import { hero, chapters, gallery, letter, closing } from "./model/story.js";
 import { useCountdown } from "./controller/useCountdown.js";
@@ -6,9 +6,11 @@ import { useSmoothScroll } from "./controller/useSmoothScroll.js";
 import { useScrollY } from "./controller/useScrollY.js";
 import { useScrollBackground } from "./controller/useScrollBackground.js";
 import { useScrollPaintings } from "./controller/useScrollPaintings.js";
+import { useUploadedMedia } from "./controller/useUploadedMedia.js";
 
 import Hero from "./view/Hero.jsx";
 import Chapter from "./view/Chapter.jsx";
+import DiaryPrompt from "./view/DiaryPrompt.jsx";
 import Gallery from "./view/Gallery.jsx";
 import LetterSection from "./view/LetterSection.jsx";
 import Closing from "./view/Closing.jsx";
@@ -51,6 +53,24 @@ export default function App() {
   const background = useScrollBackground(sectionRefs, scrollY);
   const paintingsRef = useScrollPaintings(sectionRefs, scrollY);
 
+  // Shared across Gallery's own "+" and DiaryPrompt (below Chapter 5) so
+  // either upload entry point lands in the same carousel and the same
+  // success toast — one useUploadedMedia() instance, both read/write it.
+  const { items: uploaded, addFiles, uploading } = useUploadedMedia();
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  async function handleUpload(files) {
+    const { added } = await addFiles(files);
+    if (added > 0) {
+      clearTimeout(toastTimerRef.current);
+      setToast(added === 1 ? "Recuerdo subido con éxito" : `${added} recuerdos subidos con éxito`);
+      toastTimerRef.current = setTimeout(() => setToast(null), 3200);
+    }
+    return { added };
+  }
+
   return (
     <>
       <ScrollBackground background={background} />
@@ -59,11 +79,18 @@ export default function App() {
 
       <Hero content={hero} countdown={timeSince} ref={sectionRefs.hero} />
       {chapters.map((chapter) => (
-        <Chapter key={chapter.id} chapter={chapter} ref={sectionRefs[chapter.variant]} />
+        <Fragment key={chapter.id}>
+          <Chapter chapter={chapter} ref={sectionRefs[chapter.variant]} />
+          {chapter.id === "ch05" && <DiaryPrompt onUpload={handleUpload} uploading={uploading} />}
+        </Fragment>
       ))}
-      <Gallery content={gallery} ref={sectionRefs.gallery} />
+      <Gallery content={gallery} uploaded={uploaded} onUpload={handleUpload} uploading={uploading} ref={sectionRefs.gallery} />
       <LetterSection content={letter} ref={sectionRefs.letter} />
       <Closing content={closing} countdown={timeUntilNext} ref={sectionRefs.closing} />
+
+      <div className="toast-slot" aria-live="polite">
+        {toast && <div className="toast">{toast}</div>}
+      </div>
     </>
   );
 }

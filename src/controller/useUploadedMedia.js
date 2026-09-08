@@ -8,6 +8,26 @@ const STORE = "uploads";
 // oversized video, which is the realistic failure mode here.
 const MAX_FILE_BYTES = 80 * 1024 * 1024; // 80MB
 
+const DOCUMENT_MIME_TYPES = new Set([
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+]);
+const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "txt"]);
+
+// image/video/document, or null if this isn't something we accept. Some
+// browsers report an empty file.type for .doc/.docx, so extension is a
+// fallback there.
+function classifyFile(file) {
+  if (file.type.startsWith("image/")) return "image";
+  if (file.type.startsWith("video/")) return "video";
+  if (DOCUMENT_MIME_TYPES.has(file.type)) return "document";
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext && DOCUMENT_EXTENSIONS.has(ext)) return "document";
+  return null;
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1);
@@ -103,24 +123,21 @@ export function useUploadedMedia() {
   }, []);
 
   const addFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList || []).filter(
-      (f) =>
-        (f.type.startsWith("image/") || f.type.startsWith("video/")) &&
-        f.size > 0 &&
-        f.size <= MAX_FILE_BYTES
-    );
+    const files = Array.from(fileList || [])
+      .map((f) => ({ file: f, kind: classifyFile(f) }))
+      .filter(({ file, kind }) => kind && file.size > 0 && file.size <= MAX_FILE_BYTES);
     if (files.length === 0) return { added: 0 };
     setUploading(true);
     try {
       const newRecords = [];
-      for (const file of files) {
-        const isVideo = file.type.startsWith("video/");
-        const blob = isVideo ? file : await optimizeImage(file).catch(() => file);
+      for (const { file, kind } of files) {
+        const blob = kind === "image" ? await optimizeImage(file).catch(() => file) : file;
         const url = URL.createObjectURL(blob);
         urlsRef.current.push(url);
         newRecords.push({
           id: `up-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          type: isVideo ? "video" : "image",
+          type: kind,
+          name: file.name,
           blob,
           url,
           createdAt: Date.now(),
