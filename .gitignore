@@ -4,3 +4,8 @@ dist/
 *.local
 
 .vercel
+
+# Claude Code local tool state — machine/session-specific, not app code
+.claude/
+.agents/
+skills-lock.json

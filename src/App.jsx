@@ -7,6 +7,9 @@ import { useScrollY } from "./controller/useScrollY.js";
 import { useScrollBackground } from "./controller/useScrollBackground.js";
 import { useScrollPaintings } from "./controller/useScrollPaintings.js";
 import { useUploadedMedia } from "./controller/useUploadedMedia.js";
+import { useAuth } from "./controller/useAuth.js";
+import { useStorySubmissions } from "./controller/useStorySubmissions.js";
+import { useInsiderAccess } from "./controller/useInsiderAccess.js";
 
 import Hero from "./view/Hero.jsx";
 import Chapter from "./view/Chapter.jsx";
@@ -16,6 +19,9 @@ import LetterSection from "./view/LetterSection.jsx";
 import Closing from "./view/Closing.jsx";
 import ScrollBackground from "./view/ScrollBackground.jsx";
 import ThreeBackground from "./view/ThreeBackground.jsx";
+
+// The diary invitation is rendered right after this chapter (see story.js).
+const DIARY_PROMPT_AFTER = "ch05";
 
 export default function App() {
   useSmoothScroll();
@@ -53,10 +59,19 @@ export default function App() {
   const background = useScrollBackground(sectionRefs, scrollY);
   const paintingsRef = useScrollPaintings(sectionRefs, scrollY);
 
-  // Shared across Gallery's own "+" and DiaryPrompt (below Chapter 5) so
-  // either upload entry point lands in the same carousel and the same
-  // success toast — one useUploadedMedia() instance, both read/write it.
+  // Gallery (auto-publish, per docs/BACKEND_PLAN.md req #2) and the diary
+  // (pending review, req #3) are separate stores once Supabase is
+  // configured — see useUploadedMedia.js / useStorySubmissions.js. Both
+  // gate on Supabase Auth (req #4 — only the two accounts Gustavo creates
+  // can sign in) via AuthGate, and both are only offered to an unlocked
+  // browser (useInsiderAccess) in the first place. DiaryPrompt is
+  // upload-only so it can be dropped wholesale; Gallery still has to render
+  // its carousel for everyone, so it gets `isInsider` and hides just the
+  // "+" itself.
+  const isInsider = useInsiderAccess();
+  const auth = useAuth();
   const { items: uploaded, addFiles, uploading } = useUploadedMedia();
+  const storySubmissions = useStorySubmissions();
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
@@ -81,10 +96,25 @@ export default function App() {
       {chapters.map((chapter) => (
         <Fragment key={chapter.id}>
           <Chapter chapter={chapter} ref={sectionRefs[chapter.variant]} />
-          {chapter.id === "ch05" && <DiaryPrompt onUpload={handleUpload} uploading={uploading} />}
+          {isInsider && chapter.id === DIARY_PROMPT_AFTER && (
+            <DiaryPrompt
+              auth={auth}
+              storySubmissions={storySubmissions}
+              legacyUpload={handleUpload}
+              legacyUploading={uploading}
+            />
+          )}
         </Fragment>
       ))}
-      <Gallery content={gallery} uploaded={uploaded} onUpload={handleUpload} uploading={uploading} ref={sectionRefs.gallery} />
+      <Gallery
+        content={gallery}
+        uploaded={uploaded}
+        onUpload={handleUpload}
+        uploading={uploading}
+        auth={auth}
+        isInsider={isInsider}
+        ref={sectionRefs.gallery}
+      />
       <LetterSection content={letter} ref={sectionRefs.letter} />
       <Closing content={closing} countdown={timeUntilNext} ref={sectionRefs.closing} />
 

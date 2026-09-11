@@ -80,13 +80,17 @@ p{ margin:0; }
    without hiding the painting underneath. Sits in the same z slot as the
    canvas, immediately after it in the DOM, so it paints on top of it and
    below every section's own content. */
+/* Fixed viewport-space overlay (not scroll-linked), so its bottom band used
+   to land wherever content happened to scroll to — including squarely
+   behind the diary-prompt "+" right as the gallery scrolls into view,
+   reading as a stray gradient line. Top-only now; still frames the hero. */
 .painting-vignette{
   position:fixed;
   inset:0;
   z-index:-1;
   pointer-events:none;
   background:
-    linear-gradient(180deg, rgba(10,6,16,0.4) 0%, rgba(10,6,16,0) 14%, rgba(10,6,16,0) 86%, rgba(10,6,16,0.45) 100%);
+    linear-gradient(180deg, rgba(10,6,16,0.4) 0%, rgba(10,6,16,0) 14%);
 }
 
 /* ============ CURSOR ============ */
@@ -178,9 +182,6 @@ p{ margin:0; }
     box-shadow:0 18px 40px rgba(10,6,16,0.4);
   }
 }
-@media (prefers-reduced-transparency: reduce){
-  .counter-cell{ background:var(--dusk-800); backdrop-filter:none; -webkit-backdrop-filter:none; }
-}
 .counter-num{
   font-family:var(--font-display);
   font-variant-numeric:tabular-nums;
@@ -266,9 +267,6 @@ p{ margin:0; }
   -webkit-backdrop-filter:blur(14px) saturate(150%);
   box-shadow:var(--glass-shadow);
 }
-@media (prefers-reduced-transparency: reduce){
-  .beat{ background:var(--dusk-800); backdrop-filter:none; -webkit-backdrop-filter:none; }
-}
 .beat + .beat{ margin-top:20px; }
 .beat-label{
   font-family:var(--font-body);
@@ -321,9 +319,6 @@ p{ margin:0; }
     radial-gradient(1px 1px at 25% 80%, rgba(246,236,217,0.3), transparent),
     radial-gradient(1.5px 1.5px at 60% 35%, rgba(246,236,217,0.4), transparent);
   pointer-events:none;
-}
-.chapter--sunset{
-  background-image:radial-gradient(120% 60% at 50% 100%, rgba(249,223,174,0.25), transparent 60%);
 }
 
 /* "+" right below Chapter 5 that opens DiaryPrompt's modal. */
@@ -394,29 +389,6 @@ p{ margin:0; }
 }
 @media (prefers-reduced-motion: reduce){
   .media-tile{ transition:none; }
-}
-
-/* Uploaded PDFs/docs can't render as an <img>/<video>, so they get a
-   simple icon + filename card instead, same tile footprint as a photo. */
-.media-doc{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  padding:20px;
-  background:var(--dusk-800);
-  color:var(--parchment-dim);
-}
-.media-doc-icon{ width:40px; height:40px; flex-shrink:0; }
-.media-doc-name{
-  font-size:0.82rem;
-  text-align:center;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  display:-webkit-box;
-  -webkit-line-clamp:2;
-  -webkit-box-orient:vertical;
 }
 
 /* Animated hint that the media row above is draggable: a small pill track
@@ -527,6 +499,92 @@ p{ margin:0; }
   border:0;
 }
 
+/* ============ STORY ENTRIES (live-editable, no-review chapters) ============ */
+.story-entries{
+  margin:60px auto 0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+  max-width:640px;
+  padding:0 clamp(20px,5vw,48px);
+}
+.story-entries-title{
+  font-size:1.1rem;
+  color:var(--gold-100);
+  text-shadow:0 2px 10px rgba(10,6,16,0.55);
+}
+.story-entry{
+  position:relative;
+  width:100%;
+  text-align:left;
+}
+.story-entry-edit{
+  position:absolute;
+  top:16px; right:16px;
+  padding:4px 12px;
+  border-radius:999px;
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  color:var(--parchment);
+  font-size:0.8rem;
+  cursor:pointer;
+}
+.story-entry-date{
+  font-size:0.85rem;
+  color:var(--gold-100);
+  margin-bottom:6px;
+}
+.story-entry-title{
+  font-size:1.15rem;
+  font-style:italic;
+  color:var(--parchment);
+  margin-bottom:10px;
+  padding-right:70px;
+}
+.story-entry-body{
+  font-size:0.98rem;
+  line-height:1.6;
+  color:var(--parchment-dim);
+  white-space:pre-wrap;
+}
+.story-entry-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:100%;
+}
+.story-entry-form input,
+.story-entry-form textarea{
+  width:100%;
+  padding:10px 14px;
+  border-radius:var(--radius-md);
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  color:var(--parchment);
+  font-family:inherit;
+  font-size:0.95rem;
+}
+.story-entry-form textarea{ resize:vertical; line-height:1.5; }
+.story-entry-form-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+.story-entry-form-actions button{
+  padding:8px 16px;
+  border-radius:999px;
+  border:1px solid var(--glass-border);
+  cursor:pointer;
+  font-weight:600;
+}
+.story-entry-form-actions button[type="button"]{
+  background:var(--glass-bg);
+  color:var(--parchment);
+}
+
 /* Success toast after an upload — a small glass pill that rises in and
    fades out on its own; role="status"/aria-live on its wrapper announces
    it without stealing focus. */
@@ -584,7 +642,16 @@ p{ margin:0; }
   width:min(440px, 100%);
   padding:clamp(28px,5vw,40px);
   border-radius:var(--radius-lg);
-  background:var(--dusk-800);
+  /* Same gradient as .add-memory-btn (the "+" that opens this modal). Every
+     form/message dropped inside a modal (AuthGate, diary-text-form,
+     story-entry-form) is styled for the page's normal dark background via
+     var(--parchment)/var(--parchment-dim) — redefining those two tokens
+     for this subtree, instead of overriding color on each descendant
+     class one at a time, means any new form added to a modal later gets
+     correct contrast for free. */
+  --parchment:var(--dusk-800);
+  --parchment-dim:var(--dusk-900);
+  background:linear-gradient(160deg, var(--amber-300), var(--rose-500));
   border:1px solid var(--glass-border);
   box-shadow:0 30px 70px rgba(10,6,16,0.55);
   text-align:center;
@@ -626,6 +693,127 @@ p{ margin:0; }
 @media (prefers-reduced-motion: reduce){
   .modal-backdrop, .modal{ animation:none; }
 }
+
+/* ============ AUTH GATE + DIARY TEXT (Supabase Auth sign-in) ============ */
+.auth-gate{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:12px;
+  width:100%;
+}
+.auth-gate-message{
+  font-size:0.95rem;
+  line-height:1.6;
+  color:var(--parchment-dim);
+  text-align:center;
+}
+.auth-message{
+  font-size:0.92rem;
+  line-height:1.6;
+  color:var(--parchment-dim);
+}
+.auth-form{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  width:100%;
+}
+.auth-form input{
+  flex:1 1 160px;
+  min-width:0;
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  color:var(--parchment);
+  font-size:0.95rem;
+}
+.auth-form input:focus-visible{
+  outline:2px solid var(--gold-100);
+  outline-offset:2px;
+}
+.auth-form .auth-message{
+  flex-basis:100%;
+  margin:0;
+}
+/* Shared "primary pill" treatment — the gold/amber gradient CTA used by
+   every form dropped into a modal (auth, diary text, story entries). One
+   definition instead of one per form so padding/hover/disabled can't
+   drift between them the way auth-form's and story-entry-form's already
+   had. */
+.auth-form button,
+.diary-text-form button,
+.story-entry-form-actions button[type="submit"]{
+  padding:10px 18px;
+  border-radius:999px;
+  border:1px solid var(--glass-border);
+  background:linear-gradient(160deg, var(--gold-100), var(--amber-300));
+  color:var(--dusk-800);
+  font-weight:600;
+  cursor:pointer;
+  transition:transform 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-form button:hover,
+.diary-text-form button:hover,
+.story-entry-form-actions button[type="submit"]:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(10,6,16,0.35);
+}
+.auth-form button:disabled,
+.diary-text-form button:disabled,
+.story-entry-form-actions button[type="submit"]:disabled{
+  opacity:0.6;
+  cursor:progress;
+  transform:none;
+  box-shadow:none;
+}
+.diary-text-form{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  width:100%;
+}
+.diary-text-form textarea{
+  width:100%;
+  resize:vertical;
+  padding:12px 14px;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  color:var(--parchment);
+  font-family:inherit;
+  font-size:0.95rem;
+  line-height:1.5;
+}
+.diary-text-form textarea:focus-visible{
+  outline:2px solid var(--gold-100);
+  outline-offset:2px;
+}
+.diary-text-form button{
+  align-self:flex-end;
+}
+@media (prefers-reduced-motion: reduce){
+  .auth-form button, .diary-text-form button, .story-entry-form-actions button[type="submit"]{ transition:none; }
+}
+
+/* Border tint + placeholder are cosmetic details not backed by the
+   parchment tokens on .modal, so they still need one small modal-scoped
+   rule — but one rule for every input/textarea inside a modal, not one
+   per form class. Placed after auth-form/diary-text-form/story-entry-form
+   above (same specificity as their `border` shorthand — source order is
+   the tiebreaker) so it actually wins instead of being silently
+   overwritten by their border-top-color: rgba(255,255,255,...) default. */
+.modal input,
+.modal textarea{
+  border-top-color:rgba(29,19,48,0.3);
+}
+.modal input::placeholder,
+.modal textarea::placeholder{ color:rgba(29,19,48,0.55); }
 
 /* ============ LETTER ============ */
 .letter-section{

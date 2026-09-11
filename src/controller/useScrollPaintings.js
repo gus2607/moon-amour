@@ -73,8 +73,17 @@ export function useScrollPaintings(sectionRefs, scrollY) {
         if (y >= a.y && y <= b.y) {
           state.currentIndex = a.index;
           state.nextIndex = b.index;
-          state.mix = a.index === b.index ? 0 : (y - a.y) / (b.y - a.y);
-          state.zoomProgress = zoomProgressAt(y, a.index);
+          const mix = a.index === b.index ? 0 : (y - a.y) / (b.y - a.y);
+          state.mix = mix;
+          // Inside a crossfade (a.index !== b.index), the outgoing painting's
+          // zoom keeps climbing toward 1 right up to the boundary while the
+          // incoming painting's own span-based zoom would start back at 0 —
+          // switching from one to the other at that single shared y produces
+          // a hard snap. Easing this value down by (1 - mix) makes it hit
+          // exactly 0 by the time mix reaches 1, matching the next section's
+          // starting zoom and removing the jump.
+          const raw = zoomProgressAt(y, a.index);
+          state.zoomProgress = a.index === b.index ? raw : raw * (1 - mix);
           return;
         }
       }

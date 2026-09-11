@@ -1,32 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SUPABASE_ENABLED } from "./supabaseClient.js";
+import { useAlbumMedia } from "./useAlbumMedia.js";
+import { acceptedFiles } from "./fileClassification.js";
 
 const DB_NAME = "love-story-media";
 const STORE = "uploads";
-// Client-side-only cap: nothing enforces this except this code (a visitor
-// with devtools open could bypass it), but it protects an ordinary visitor
-// from accidentally filling their own IndexedDB/tab memory with an
-// oversized video, which is the realistic failure mode here.
-const MAX_FILE_BYTES = 80 * 1024 * 1024; // 80MB
-
-const DOCUMENT_MIME_TYPES = new Set([
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "text/plain",
-]);
-const DOCUMENT_EXTENSIONS = new Set(["pdf", "doc", "docx", "txt"]);
-
-// image/video/document, or null if this isn't something we accept. Some
-// browsers report an empty file.type for .doc/.docx, so extension is a
-// fallback there.
-function classifyFile(file) {
-  if (file.type.startsWith("image/")) return "image";
-  if (file.type.startsWith("video/")) return "video";
-  if (DOCUMENT_MIME_TYPES.has(file.type)) return "document";
-  const ext = file.name.split(".").pop()?.toLowerCase();
-  if (ext && DOCUMENT_EXTENSIONS.has(ext)) return "document";
-  return null;
-}
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -92,11 +70,20 @@ function optimizeImage(file, { maxDim = 1600, quality = 0.82 } = {}) {
   });
 }
 
-// This site is static — no backend to upload to — so "adding a memory"
-// means storing it in this browser's IndexedDB instead. It survives
-// reloads on this device, but won't sync to another device or browser;
-// that would need a real backend.
+// Gallery/album storage. Dispatches to the Supabase-backed useAlbumMedia
+// once VITE_SUPABASE_URL/ANON_KEY are configured (see supabaseClient.js and
+// docs/BACKEND_PLAN.md). SUPABASE_ENABLED is a build-time constant fixed
+// for the app's whole lifetime, so this conditional call never actually
+// changes which branch runs between renders — calling only the hook that's
+// needed skips opening/hydrating IndexedDB entirely once Supabase is live.
 export function useUploadedMedia() {
+  return SUPABASE_ENABLED ? useAlbumMedia() : useLocalUploadedMedia();
+}
+
+// Legacy fallback while no Supabase project exists yet: storing in this
+// browser's IndexedDB. Survives reloads on this device, but never syncs
+// anywhere else.
+function useLocalUploadedMedia() {
   const [items, setItems] = useState([]);
   const [uploading, setUploading] = useState(false);
   const urlsRef = useRef([]);
@@ -123,9 +110,7 @@ export function useUploadedMedia() {
   }, []);
 
   const addFiles = useCallback(async (fileList) => {
-    const files = Array.from(fileList || [])
-      .map((f) => ({ file: f, kind: classifyFile(f) }))
-      .filter(({ file, kind }) => kind && file.size > 0 && file.size <= MAX_FILE_BYTES);
+    const files = acceptedFiles(fileList);
     if (files.length === 0) return { added: 0 };
     setUploading(true);
     try {
