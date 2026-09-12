@@ -7,7 +7,7 @@ import StoryEntries, { StoryEntryForm } from "./StoryEntries.jsx";
 import { useStoryEntries } from "../controller/useStoryEntries.js";
 
 const Gallery = forwardRef(function Gallery(
-  { content, uploaded, onUpload, uploading, auth, isInsider },
+  { content, uploaded, onUpload, uploading, auth },
   ref
 ) {
   // Carousel is photos/videos only — documents (which can only land here via
@@ -54,22 +54,19 @@ const Gallery = forwardRef(function Gallery(
         <span className="swipe-hint-label">{content.note}</span>
       </Reveal>
 
-      {/* Everyone sees the carousel; only an unlocked browser (useInsiderAccess)
-          is offered the way to add to it. One "+" covers both photos/videos
-          and writing a new story entry — two separate buttons here read as
-          a duplicate rather than two distinct actions. */}
-      {isInsider && (
-        <Reveal as="div" className="add-memory">
-          <p className="add-memory-text">¿Quieres añadir más de nuestros momentos?</p>
-          <AddMemoryModal
-            auth={auth}
-            onUpload={onUpload}
-            uploading={uploading}
-            onAddEntry={storyEntries.addEntry}
-            entrySaving={storyEntries.saving}
-          />
-        </Reveal>
-      )}
+      {/* One "+" covers both photos/videos and writing a new story entry —
+          two separate buttons here read as a duplicate rather than two
+          distinct actions. AuthGate inside the modal is the real gate. */}
+      <Reveal as="div" className="add-memory">
+        <p className="add-memory-text">¿Quieres añadir más de nuestros momentos?</p>
+        <AddMemoryModal
+          auth={auth}
+          onUpload={onUpload}
+          uploading={uploading}
+          onAddEntry={storyEntries.addEntry}
+          entrySaving={storyEntries.saving}
+        />
+      </Reveal>
 
       <StoryEntries
         entries={storyEntries.entries}

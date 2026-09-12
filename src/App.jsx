@@ -9,7 +9,6 @@ import { useScrollPaintings } from "./controller/useScrollPaintings.js";
 import { useUploadedMedia } from "./controller/useUploadedMedia.js";
 import { useAuth } from "./controller/useAuth.js";
 import { useStorySubmissions } from "./controller/useStorySubmissions.js";
-import { useInsiderAccess } from "./controller/useInsiderAccess.js";
 
 import Hero from "./view/Hero.jsx";
 import Chapter from "./view/Chapter.jsx";
@@ -63,12 +62,7 @@ export default function App() {
   // (pending review, req #3) are separate stores once Supabase is
   // configured — see useUploadedMedia.js / useStorySubmissions.js. Both
   // gate on Supabase Auth (req #4 — only the two accounts Gustavo creates
-  // can sign in) via AuthGate, and both are only offered to an unlocked
-  // browser (useInsiderAccess) in the first place. DiaryPrompt is
-  // upload-only so it can be dropped wholesale; Gallery still has to render
-  // its carousel for everyone, so it gets `isInsider` and hides just the
-  // "+" itself.
-  const isInsider = useInsiderAccess();
+  // can sign in) via AuthGate.
   const auth = useAuth();
   const { items: uploaded, addFiles, uploading } = useUploadedMedia();
   const storySubmissions = useStorySubmissions();
@@ -96,7 +90,7 @@ export default function App() {
       {chapters.map((chapter) => (
         <Fragment key={chapter.id}>
           <Chapter chapter={chapter} ref={sectionRefs[chapter.variant]} />
-          {isInsider && chapter.id === DIARY_PROMPT_AFTER && (
+          {chapter.id === DIARY_PROMPT_AFTER && (
             <DiaryPrompt
               auth={auth}
               storySubmissions={storySubmissions}
@@ -112,7 +106,6 @@ export default function App() {
         onUpload={handleUpload}
         uploading={uploading}
         auth={auth}
-        isInsider={isInsider}
         ref={sectionRefs.gallery}
       />
       <LetterSection content={letter} ref={sectionRefs.letter} />

@@ -3,8 +3,10 @@ import { SUPABASE_ENABLED } from "../controller/supabaseClient.js";
 
 // Wraps an upload/edit entry point (Gallery's "+", DiaryPrompt's, or
 // StoryEntries') so it can't be used until one of the two of you signs in —
-// see useAuth.js. Renders children as-is when Supabase isn't configured
-// yet, so the site behaves exactly like before until that backend exists.
+// see useAuth.js. This is the only access gate: the "+" itself is always
+// visible, but nothing inside works until login. Renders children as-is
+// when Supabase isn't configured yet, so the site behaves exactly like
+// before until that backend exists.
 export default function AuthGate({ auth, message, children }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
