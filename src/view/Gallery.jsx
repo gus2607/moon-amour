@@ -3,8 +3,6 @@ import Reveal from "./Reveal.jsx";
 import UploadButton from "./UploadButton.jsx";
 import AuthGate from "./AuthGate.jsx";
 import Modal from "./Modal.jsx";
-import StoryEntries, { StoryEntryForm } from "./StoryEntries.jsx";
-import { useStoryEntries } from "../controller/useStoryEntries.js";
 
 const Gallery = forwardRef(function Gallery(
   { content, uploaded, onUpload, uploading, auth },
@@ -31,8 +29,6 @@ const Gallery = forwardRef(function Gallery(
     return fromDb.length > 0 ? fromDb : content.slots;
   }, [content.slots, uploaded]);
 
-  const storyEntries = useStoryEntries();
-
   return (
     <section ref={ref} className="gallery">
       <div className="wrap">
@@ -54,26 +50,13 @@ const Gallery = forwardRef(function Gallery(
         <span className="swipe-hint-label">{content.note}</span>
       </Reveal>
 
-      {/* One "+" covers both photos/videos and writing a new story entry —
-          two separate buttons here read as a duplicate rather than two
-          distinct actions. AuthGate inside the modal is the real gate. */}
+      {/* Photos/videos only — adding/editing/deleting a chapter lives in
+          ChapterManager.jsx's top-right panel, not here. AuthGate inside
+          the modal is the real gate. */}
       <Reveal as="div" className="add-memory">
         <p className="add-memory-text">¿Quieres añadir más de nuestros momentos?</p>
-        <AddMemoryModal
-          auth={auth}
-          onUpload={onUpload}
-          uploading={uploading}
-          onAddEntry={storyEntries.addEntry}
-          entrySaving={storyEntries.saving}
-        />
+        <AddMemoryModal auth={auth} onUpload={onUpload} uploading={uploading} />
       </Reveal>
-
-      <StoryEntries
-        entries={storyEntries.entries}
-        auth={auth}
-        saving={storyEntries.saving}
-        onSave={storyEntries.updateEntry}
-      />
     </section>
   );
 });
@@ -81,10 +64,9 @@ const Gallery = forwardRef(function Gallery(
 export default memo(Gallery);
 
 // Same open-a-modal shape as DiaryPrompt.jsx's "+", but for the album
-// (photos/videos, or a new story entry — both publish immediately) rather
-// than the diary (pending review) — see AuthGate's `message` for the
-// login-gated copy.
-function AddMemoryModal({ auth, onUpload, uploading, onAddEntry, entrySaving }) {
+// (photos/videos, publishes immediately) rather than the diary (pending
+// review) — see AuthGate's `message` for the login-gated copy.
+function AddMemoryModal({ auth, onUpload, uploading }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -107,15 +89,6 @@ function AddMemoryModal({ auth, onUpload, uploading, onAddEntry, entrySaving }) 
               uploading={uploading}
               accept="image/*,video/*"
               label="Añadir fotos o videos"
-            />
-            <p className="modal-message">O escribe un capítulo nuevo:</p>
-            <StoryEntryForm
-              saving={entrySaving}
-              submitLabel="Publicar"
-              onSubmit={async (fields) => {
-                const { ok } = await onAddEntry({ ...fields, author: auth.user?.email });
-                if (ok) setOpen(false);
-              }}
             />
           </AuthGate>
         </Modal>
@@ -153,6 +126,12 @@ function MediaCarousel({ items }) {
   const draggingRef = useRef(null);
   const driftFrameRef = useRef(null);
   const velocityRef = useRef(DRIFT_SPEED);
+  // The DOM rounds scrollLeft to whole pixels, so writing it directly every
+  // frame from a sub-1px velocity (DRIFT_SPEED is -0.45) loses the fraction
+  // on every single frame and the row never actually moves. This tracks the
+  // true, fractional position in JS instead — scrollLeft is only ever a
+  // rounded read-out of it, never the source of truth.
+  const posRef = useRef(0);
 
   useEffect(() => {
     const el = trackRef.current;
@@ -162,14 +141,17 @@ function MediaCarousel({ items }) {
       return el.scrollWidth / 3;
     }
     let unit = setWidth();
+    posRef.current = unit;
     el.scrollLeft = unit;
 
     function onScroll() {
       if (draggingRef.current) return;
       if (el.scrollLeft < unit * 0.5) {
         el.scrollLeft += unit;
+        posRef.current += unit;
       } else if (el.scrollLeft > unit * 1.5) {
         el.scrollLeft -= unit;
+        posRef.current -= unit;
       }
     }
 
@@ -177,15 +159,23 @@ function MediaCarousel({ items }) {
       const ratio = el.scrollLeft / unit;
       unit = setWidth();
       el.scrollLeft = unit * ratio;
+      posRef.current = el.scrollLeft;
     }
 
     el.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
 
+    window.__drift = { ticks: 0 };
     function drift() {
       driftFrameRef.current = requestAnimationFrame(drift);
+      window.__drift.ticks++;
+      window.__drift.dragging = draggingRef.current;
+      window.__drift.pos = posRef.current;
+      window.__drift.velocity = velocityRef.current;
       if (draggingRef.current) return;
-      el.scrollLeft -= velocityRef.current;
+      posRef.current -= velocityRef.current;
+      el.scrollLeft = posRef.current;
+      window.__drift.scrollLeftAfter = el.scrollLeft;
       velocityRef.current += (DRIFT_SPEED - velocityRef.current) * DRIFT_RECOVERY;
     }
 
@@ -252,6 +242,9 @@ function MediaCarousel({ items }) {
       }
     }
     draggingRef.current = null;
+    // Drag moved scrollLeft directly without touching posRef — resync it
+    // now, or drift would snap back to wherever it was before the drag.
+    if (el) posRef.current = el.scrollLeft;
     if (drag && Math.abs(drag.velocity) > 0.02) {
       velocityRef.current = -drag.velocity * 16;
     }

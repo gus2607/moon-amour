@@ -9,17 +9,20 @@ import { useScrollPaintings } from "./controller/useScrollPaintings.js";
 import { useUploadedMedia } from "./controller/useUploadedMedia.js";
 import { useAuth } from "./controller/useAuth.js";
 import { useStorySubmissions } from "./controller/useStorySubmissions.js";
+import { useChapters } from "./controller/useChapters.js";
 
 import Hero from "./view/Hero.jsx";
 import Chapter from "./view/Chapter.jsx";
 import DiaryPrompt from "./view/DiaryPrompt.jsx";
 import Gallery from "./view/Gallery.jsx";
+import ChapterManager from "./view/ChapterManager.jsx";
 import LetterSection from "./view/LetterSection.jsx";
 import Closing from "./view/Closing.jsx";
 import ScrollBackground from "./view/ScrollBackground.jsx";
 import ThreeBackground from "./view/ThreeBackground.jsx";
 
-// The diary invitation is rendered right after this chapter (see story.js).
+// Only used while the chapters table is still empty (see the fallback
+// below) — once seeded, diary_anchor on the row itself decides this.
 const DIARY_PROMPT_AFTER = "ch05";
 
 export default function App() {
@@ -66,9 +69,27 @@ export default function App() {
   const auth = useAuth();
   const { items: uploaded, addFiles, uploading } = useUploadedMedia();
   const storySubmissions = useStorySubmissions();
+  const chaptersData = useChapters();
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
+
+  // The DB (chapters table) is the sole source once it has rows — the
+  // static `chapters` array from story.js only shows while it's still
+  // empty, same fallback idiom Gallery uses for content.slots/album_photos.
+  const usingFallback = chaptersData.entries.length === 0;
+  const timelineChapters = useMemo(() => {
+    if (usingFallback) return chapters;
+    return chaptersData.entries.map((entry) => ({
+      id: entry.id,
+      variant: entry.variant || undefined,
+      num: entry.num,
+      title: entry.title,
+      lede: entry.description,
+      beats: entry.body ? [{ text: entry.body }] : [],
+      diaryAnchor: entry.diary_anchor,
+    }));
+  }, [usingFallback, chaptersData.entries]);
 
   async function handleUpload(files) {
     const { added } = await addFiles(files);
@@ -85,21 +106,25 @@ export default function App() {
       <ScrollBackground background={background} />
       <ThreeBackground paintingsRef={paintingsRef} />
       <div aria-hidden="true" className="painting-vignette" />
+      <ChapterManager auth={auth} chapters={chaptersData} />
 
       <Hero content={hero} countdown={timeSince} ref={sectionRefs.hero} />
-      {chapters.map((chapter) => (
-        <Fragment key={chapter.id}>
-          <Chapter chapter={chapter} ref={sectionRefs[chapter.variant]} />
-          {chapter.id === DIARY_PROMPT_AFTER && (
-            <DiaryPrompt
-              auth={auth}
-              storySubmissions={storySubmissions}
-              legacyUpload={handleUpload}
-              legacyUploading={uploading}
-            />
-          )}
-        </Fragment>
-      ))}
+      {timelineChapters.map((chapter) => {
+        const showDiaryPrompt = usingFallback ? chapter.id === DIARY_PROMPT_AFTER : chapter.diaryAnchor;
+        return (
+          <Fragment key={chapter.id}>
+            <Chapter chapter={chapter} ref={chapter.variant ? sectionRefs[chapter.variant] : undefined} />
+            {showDiaryPrompt && (
+              <DiaryPrompt
+                auth={auth}
+                storySubmissions={storySubmissions}
+                legacyUpload={handleUpload}
+                legacyUploading={uploading}
+              />
+            )}
+          </Fragment>
+        );
+      })}
       <Gallery
         content={gallery}
         uploaded={uploaded}

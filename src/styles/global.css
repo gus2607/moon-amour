@@ -499,63 +499,15 @@ p{ margin:0; }
   border:0;
 }
 
-/* ============ STORY ENTRIES (live-editable, no-review chapters) ============ */
-.story-entries{
-  margin:60px auto 0;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:20px;
-  max-width:640px;
-  padding:0 clamp(20px,5vw,48px);
-}
-.story-entries-title{
-  font-size:1.1rem;
-  color:var(--gold-100);
-  text-shadow:0 2px 10px rgba(10,6,16,0.55);
-}
-.story-entry{
-  position:relative;
-  width:100%;
-  text-align:left;
-}
-.story-entry-edit{
-  position:absolute;
-  top:16px; right:16px;
-  padding:4px 12px;
-  border-radius:999px;
-  border:1px solid var(--glass-border);
-  background:var(--glass-bg);
-  color:var(--parchment);
-  font-size:0.8rem;
-  cursor:pointer;
-}
-.story-entry-date{
-  font-size:0.85rem;
-  color:var(--gold-100);
-  margin-bottom:6px;
-}
-.story-entry-title{
-  font-size:1.15rem;
-  font-style:italic;
-  color:var(--parchment);
-  margin-bottom:10px;
-  padding-right:70px;
-}
-.story-entry-body{
-  font-size:0.98rem;
-  line-height:1.6;
-  color:var(--parchment-dim);
-  white-space:pre-wrap;
-}
-.story-entry-form{
+/* ============ CHAPTER FORM (ChapterManager's add/edit panel only) ============ */
+.chapter-form{
   display:flex;
   flex-direction:column;
   gap:10px;
   width:100%;
 }
-.story-entry-form input,
-.story-entry-form textarea{
+.chapter-form input,
+.chapter-form textarea{
   width:100%;
   padding:10px 14px;
   border-radius:var(--radius-md);
@@ -567,22 +519,95 @@ p{ margin:0; }
   font-family:inherit;
   font-size:0.95rem;
 }
-.story-entry-form textarea{ resize:vertical; line-height:1.5; }
-.story-entry-form-actions{
+.chapter-form textarea{ resize:vertical; line-height:1.5; }
+.chapter-form-actions{
   display:flex;
   justify-content:flex-end;
   gap:10px;
 }
-.story-entry-form-actions button{
+.chapter-form-actions button{
   padding:8px 16px;
   border-radius:999px;
   border:1px solid var(--glass-border);
   cursor:pointer;
   font-weight:600;
 }
-.story-entry-form-actions button[type="button"]{
+.chapter-form-actions button[type="button"]{
   background:var(--glass-bg);
   color:var(--parchment);
+}
+
+/* ============ CHAPTER MANAGER (top-right admin panel) ============ */
+.chapter-admin-btn{
+  position:fixed;
+  top:20px; right:20px;
+  z-index:25;
+  width:56px; height:56px;
+  padding:0;
+  border:1px solid var(--glass-border);
+  border-radius:50%;
+  background:transparent;
+  cursor:pointer;
+  overflow:hidden;
+  box-shadow:0 12px 30px rgba(10,6,16,0.45);
+  transition:transform 0.2s cubic-bezier(.2,.7,.2,1), box-shadow 0.2s ease;
+}
+.chapter-admin-btn img{
+  width:100%; height:100%;
+  object-fit:cover;
+  display:block;
+}
+.chapter-admin-btn:active{ transform:scale(0.92); }
+@media (hover:hover){
+  .chapter-admin-btn:hover{ transform:translateY(-3px) scale(1.05); box-shadow:0 16px 36px rgba(10,6,16,0.5); }
+}
+@media (max-width:480px){
+  .chapter-admin-btn{ top:14px; right:14px; width:46px; height:46px; }
+}
+@media (prefers-reduced-motion: reduce){
+  .chapter-admin-btn{ transition:none; }
+}
+.chapter-admin-list{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:100%;
+  max-height:38vh;
+  overflow-y:auto;
+  text-align:left;
+}
+.chapter-admin-row{
+  padding:14px 16px;
+  border-radius:var(--radius-md);
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+}
+.chapter-admin-row-title{
+  font-family:var(--font-display);
+  font-style:italic;
+  color:var(--parchment);
+  margin:0 0 10px;
+}
+.chapter-admin-row-actions{
+  display:flex;
+  gap:8px;
+}
+.chapter-admin-row-actions button{
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid var(--glass-border);
+  background:var(--glass-bg);
+  color:var(--parchment);
+  font-size:0.85rem;
+  cursor:pointer;
+}
+.chapter-admin-row-actions button.chapter-admin-row-delete{
+  background:rgba(201,85,107,0.22);
+  border-color:rgba(201,85,107,0.45);
+}
+.chapter-admin-new-label{
+  margin-top:4px;
+  align-self:flex-start;
 }
 
 /* Success toast after an upload — a small glass pill that rises in and
@@ -644,7 +669,7 @@ p{ margin:0; }
   border-radius:var(--radius-lg);
   /* Same gradient as .add-memory-btn (the "+" that opens this modal). Every
      form/message dropped inside a modal (AuthGate, diary-text-form,
-     story-entry-form) is styled for the page's normal dark background via
+     chapter-form) is styled for the page's normal dark background via
      var(--parchment)/var(--parchment-dim) — redefining those two tokens
      for this subtree, instead of overriding color on each descendant
      class one at a time, means any new form added to a modal later gets
@@ -740,13 +765,13 @@ p{ margin:0; }
   margin:0;
 }
 /* Shared "primary pill" treatment — the gold/amber gradient CTA used by
-   every form dropped into a modal (auth, diary text, story entries). One
+   every form dropped into a modal (auth, diary text, chapter form). One
    definition instead of one per form so padding/hover/disabled can't
-   drift between them the way auth-form's and story-entry-form's already
+   drift between them the way auth-form's and chapter-form's already
    had. */
 .auth-form button,
 .diary-text-form button,
-.story-entry-form-actions button[type="submit"]{
+.chapter-form-actions button[type="submit"]{
   padding:10px 18px;
   border-radius:999px;
   border:1px solid var(--glass-border);
@@ -758,13 +783,13 @@ p{ margin:0; }
 }
 .auth-form button:hover,
 .diary-text-form button:hover,
-.story-entry-form-actions button[type="submit"]:hover{
+.chapter-form-actions button[type="submit"]:hover{
   transform:translateY(-2px);
   box-shadow:0 12px 28px rgba(10,6,16,0.35);
 }
 .auth-form button:disabled,
 .diary-text-form button:disabled,
-.story-entry-form-actions button[type="submit"]:disabled{
+.chapter-form-actions button[type="submit"]:disabled{
   opacity:0.6;
   cursor:progress;
   transform:none;
@@ -798,13 +823,13 @@ p{ margin:0; }
   align-self:flex-end;
 }
 @media (prefers-reduced-motion: reduce){
-  .auth-form button, .diary-text-form button, .story-entry-form-actions button[type="submit"]{ transition:none; }
+  .auth-form button, .diary-text-form button, .chapter-form-actions button[type="submit"]{ transition:none; }
 }
 
 /* Border tint + placeholder are cosmetic details not backed by the
    parchment tokens on .modal, so they still need one small modal-scoped
    rule — but one rule for every input/textarea inside a modal, not one
-   per form class. Placed after auth-form/diary-text-form/story-entry-form
+   per form class. Placed after auth-form/diary-text-form/chapter-form
    above (same specificity as their `border` shorthand — source order is
    the tiebreaker) so it actually wins instead of being silently
    overwritten by their border-top-color: rgba(255,255,255,...) default. */

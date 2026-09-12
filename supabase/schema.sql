@@ -34,14 +34,27 @@ create table if not exists story_submissions (
     check (type = 'text' or storage_path is not null)
 );
 
--- Capítulos escritos por la pareja: a diferencia de story_submissions, esto
--- publica de inmediato y cualquiera de las dos cuentas puede editar
--- cualquier fila — sin revisión, sin dueño por fila. Ver StoryEntries.jsx.
-create table if not exists story_entries (
+-- Capítulos de la línea de tiempo — TODOS ellos, no solo los que se agregan
+-- después: los 5 originales (antes hardcoded en model/story.js) fueron
+-- sembrados aquí también, para que el panel de ChapterManager.jsx pueda
+-- editar/borrar cualquiera, viejo o nuevo. Publica de inmediato, cualquiera
+-- de las dos cuentas puede editar/borrar cualquier fila — sin revisión, sin
+-- dueño por fila. `variant` (dawn/midday/gold/pause/sunset) solo existe en
+-- los 5 originales — es lo que engancha cada uno a su propio tramo de fondo
+-- animado (ver backgroundStops.js); los capítulos nuevos no tienen uno y
+-- simplemente no producen un tramo de fondo propio. `diary_anchor` marca la
+-- fila después de la cual aparece el DiaryPrompt (hoy, el capítulo 5).
+-- model/story.js conserva el arreglo original como fallback visual (con sus
+-- beats/tags completos) solo para cuando esta tabla está vacía — mismo
+-- patrón que content.slots para album_photos.
+create table if not exists chapters (
   id uuid primary key default gen_random_uuid(),
   title text not null,
-  date_label text,
+  description text,
+  num text,
   body text not null,
+  variant text,
+  diary_anchor boolean not null default false,
   author text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -49,17 +62,20 @@ create table if not exists story_entries (
 
 alter table album_photos enable row level security;
 alter table story_submissions enable row level security;
-alter table story_entries enable row level security;
+alter table chapters enable row level security;
 
-drop policy if exists "anyone can read story entries" on story_entries;
-create policy "anyone can read story entries" on story_entries
+drop policy if exists "anyone can read chapters" on chapters;
+create policy "anyone can read chapters" on chapters
   for select using (true);
-drop policy if exists "authenticated users insert story entries" on story_entries;
-create policy "authenticated users insert story entries" on story_entries
+drop policy if exists "authenticated users insert chapters" on chapters;
+create policy "authenticated users insert chapters" on chapters
   for insert with check (auth.role() = 'authenticated');
-drop policy if exists "authenticated users update story entries" on story_entries;
-create policy "authenticated users update story entries" on story_entries
+drop policy if exists "authenticated users update chapters" on chapters;
+create policy "authenticated users update chapters" on chapters
   for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "authenticated users delete chapters" on chapters;
+create policy "authenticated users delete chapters" on chapters
+  for delete using (auth.role() = 'authenticated');
 
 -- Solo un usuario autenticado (una de las dos cuentas) puede insertar.
 drop policy if exists "authenticated users insert album" on album_photos;

@@ -5,12 +5,14 @@ const Chapter = forwardRef(function Chapter({ chapter }, ref) {
   const isPause = chapter.variant === "pause";
 
   return (
-    <section ref={ref} className={`chapter chapter--${chapter.variant}`}>
+    <section ref={ref} className={chapter.variant ? `chapter chapter--${chapter.variant}` : "chapter"}>
       {isPause && <div className="stars" aria-hidden="true" />}
       <div className="wrap">
-        <Reveal as="p" className="chapter-num">
-          {chapter.num}
-        </Reveal>
+        {chapter.num && (
+          <Reveal as="p" className="chapter-num">
+            {chapter.num}
+          </Reveal>
+        )}
         <Reveal as="h2">{chapter.title}</Reveal>
 
         {chapter.lede && (
@@ -28,10 +30,10 @@ const Chapter = forwardRef(function Chapter({ chapter }, ref) {
           </Reveal>
         )}
 
-        {chapter.beats?.map((beat) => (
-          <Reveal as="div" className="beat" key={beat.label}>
-            <p className="beat-label">{beat.label}</p>
-            <p>{beat.text}</p>
+        {chapter.beats?.map((beat, i) => (
+          <Reveal as="div" className="beat" key={beat.label ?? i}>
+            {beat.label && <p className="beat-label">{beat.label}</p>}
+            <p style={{ whiteSpace: "pre-wrap" }}>{beat.text}</p>
           </Reveal>
         ))}
 

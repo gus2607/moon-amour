@@ -8,6 +8,10 @@ export const hero = {
     "Esta es la línea de tiempo de todo lo que hemos vivido: Gustavo & Luna, desde 2022 hasta ahora. Escrita por mí, para ti.",
 };
 
+// Fallback only: these 5 were seeded into the `chapters` table (see
+// supabase/schema.sql) so ChapterManager.jsx's panel can edit/delete them
+// like any other chapter. App.jsx renders this array only while that table
+// is still empty — same pattern as `gallery.slots` below vs. album_photos.
 export const chapters = [
   {
     id: "ch01",
