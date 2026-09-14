@@ -15,11 +15,24 @@ export default function AuthGate({ auth, message, children }) {
   if (!SUPABASE_ENABLED) return children;
   if (auth.user) return children;
 
+  if (auth.denied) {
+    return (
+      <div className="auth-gate">
+        <p className="auth-gate-message">Lo siento, no haces parte de esta historia.</p>
+      </div>
+    );
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
-    const { ok } = await auth.signIn(email, password);
-    if (!ok) setError("Correo o contraseña incorrectos.");
+    const { ok, denied, attemptsLeft } = await auth.signIn(email, password);
+    if (ok || denied) return;
+    setError(
+      typeof attemptsLeft === "number"
+        ? `Correo o contraseña incorrectos. Te quedan ${attemptsLeft} intento${attemptsLeft === 1 ? "" : "s"}.`
+        : "Correo o contraseña incorrectos."
+    );
   }
 
   return (

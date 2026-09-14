@@ -69,17 +69,24 @@ export default memo(Gallery);
 function AddMemoryModal({ auth, onUpload, uploading }) {
   const [open, setOpen] = useState(false);
 
+  // Only the "+" trigger hides once denied — an already-open modal stays
+  // mounted so AuthGate can still show the denial message instead of the
+  // whole thing vanishing mid-explanation.
+  if (auth.denied && !open) return null;
+
   return (
     <>
-      <button
-        type="button"
-        className="add-memory-btn"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-label="Añadir a nuestra historia"
-      >
-        +
-      </button>
+      {!auth.denied && (
+        <button
+          type="button"
+          className="add-memory-btn"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-label="Añadir a nuestra historia"
+        >
+          +
+        </button>
+      )}
 
       {open && (
         <Modal titleId="album-modal-title" title="Nuestro álbum" onClose={() => setOpen(false)}>
@@ -132,6 +139,14 @@ function MediaCarousel({ items }) {
   // true, fractional position in JS instead — scrollLeft is only ever a
   // rounded read-out of it, never the source of truth.
   const posRef = useRef(0);
+  // Distinguishes a scroll event caused by our own code writing
+  // el.scrollLeft (drift, wraparound, resize) from one caused by real user
+  // input (trackpad/wheel scrolling the track natively, which never goes
+  // through onPointerDown/Move — only the 'scroll' event sees it). Without
+  // this, onScroll couldn't tell the two apart, so a native scroll left
+  // posRef stale and the very next drift() tick snapped the row back to
+  // where it was before the user's own scroll input.
+  const programmaticRef = useRef(false);
 
   useEffect(() => {
     const el = trackRef.current;
@@ -142,14 +157,24 @@ function MediaCarousel({ items }) {
     }
     let unit = setWidth();
     posRef.current = unit;
+    programmaticRef.current = true;
     el.scrollLeft = unit;
 
     function onScroll() {
       if (draggingRef.current) return;
+      if (programmaticRef.current) {
+        programmaticRef.current = false;
+      } else {
+        // Real native scroll (trackpad/wheel) — resync to what the user
+        // actually did before checking for wraparound.
+        posRef.current = el.scrollLeft;
+      }
       if (el.scrollLeft < unit * 0.5) {
+        programmaticRef.current = true;
         el.scrollLeft += unit;
         posRef.current += unit;
       } else if (el.scrollLeft > unit * 1.5) {
+        programmaticRef.current = true;
         el.scrollLeft -= unit;
         posRef.current -= unit;
       }
@@ -158,6 +183,7 @@ function MediaCarousel({ items }) {
     function onResize() {
       const ratio = el.scrollLeft / unit;
       unit = setWidth();
+      programmaticRef.current = true;
       el.scrollLeft = unit * ratio;
       posRef.current = el.scrollLeft;
     }
@@ -165,17 +191,12 @@ function MediaCarousel({ items }) {
     el.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onResize);
 
-    window.__drift = { ticks: 0 };
     function drift() {
       driftFrameRef.current = requestAnimationFrame(drift);
-      window.__drift.ticks++;
-      window.__drift.dragging = draggingRef.current;
-      window.__drift.pos = posRef.current;
-      window.__drift.velocity = velocityRef.current;
       if (draggingRef.current) return;
       posRef.current -= velocityRef.current;
+      programmaticRef.current = true;
       el.scrollLeft = posRef.current;
-      window.__drift.scrollLeftAfter = el.scrollLeft;
       velocityRef.current += (DRIFT_SPEED - velocityRef.current) * DRIFT_RECOVERY;
     }
 

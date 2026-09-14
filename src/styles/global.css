@@ -572,16 +572,34 @@ p{ margin:0; }
   flex-direction:column;
   gap:12px;
   width:100%;
-  max-height:38vh;
-  overflow-y:auto;
   text-align:left;
 }
 .chapter-admin-row{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
   padding:14px 16px;
   border-radius:var(--radius-md);
   border:1px solid var(--glass-border);
   background:var(--glass-bg);
+  list-style:none;
 }
+.chapter-admin-row-body{
+  flex:1;
+  min-width:0;
+}
+.chapter-admin-row-handle{
+  flex:none;
+  width:28px; height:28px;
+  display:flex; align-items:center; justify-content:center;
+  border-radius:8px;
+  color:var(--parchment);
+  opacity:0.6;
+  cursor:grab;
+  touch-action:none;
+  user-select:none;
+}
+.chapter-admin-row-handle:active{ cursor:grabbing; opacity:1; }
 .chapter-admin-row-title{
   font-family:var(--font-display);
   font-style:italic;
@@ -684,8 +702,29 @@ p{ margin:0; }
   flex-direction:column;
   align-items:center;
   gap:18px;
+  max-height:min(640px, 85vh);
   animation:modalIn 0.35s cubic-bezier(.2,.8,.2,1);
 }
+.modal-close, .modal-title{ flex:none; }
+.modal-body{
+  width:100%;
+  min-height:0;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(29,19,48,0.35) transparent;
+}
+.modal-body::-webkit-scrollbar{ width:8px; }
+.modal-body::-webkit-scrollbar-track{ background:transparent; }
+.modal-body::-webkit-scrollbar-thumb{
+  background:rgba(29,19,48,0.35);
+  border-radius:999px;
+}
+.modal-body::-webkit-scrollbar-thumb:hover{ background:rgba(29,19,48,0.5); }
 @keyframes modalIn{
   from{ opacity:0; transform:translateY(16px) scale(0.97); }
   to{ opacity:1; transform:translateY(0) scale(1); }
@@ -717,6 +756,16 @@ p{ margin:0; }
 }
 @media (prefers-reduced-motion: reduce){
   .modal-backdrop, .modal{ animation:none; }
+}
+/* Wider variant for content-heavy modals (chapter admin panel: a scrolling
+   list of rows plus a form) — other modals (auth, diary, album) keep the
+   440px default so this only widens where it's actually cramped. */
+.modal-wide{
+  width:min(720px, 100%);
+  max-height:min(720px, 85vh);
+}
+@media (max-width:720px){
+  .modal-wide{ width:min(440px, 100%); }
 }
 
 /* ============ AUTH GATE + DIARY TEXT (Supabase Auth sign-in) ============ */

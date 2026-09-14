@@ -56,9 +56,37 @@ create table if not exists chapters (
   variant text,
   diary_anchor boolean not null default false,
   author text,
+  position integer,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- `position` drives the timeline/admin order (drag-to-reorder in
+-- ChapterManager.jsx) instead of `created_at` — `num` stays free-text
+-- ("Capítulo 06") and is never parsed for ordering. Safe to re-run: only
+-- backfills rows that don't have one yet, in their current created_at order.
+alter table chapters add column if not exists position integer;
+with ranked as (
+  select id, row_number() over (order by position nulls last, created_at asc) as rn
+  from chapters
+)
+update chapters set position = ranked.rn
+from ranked
+where chapters.id = ranked.id and chapters.position is null;
+
+-- Server-side counter for supabase/functions/login-attempt — keeps the
+-- 3-attempt lockout real (a page reload can't reset it, unlike client-only
+-- state) and caps how many times a script hitting the function directly
+-- can probe a real account's password. Only the Edge Function's
+-- service-role client ever touches this table.
+create table if not exists login_throttle (
+  identifier text primary key,
+  fail_count integer not null default 0,
+  first_fail_at timestamptz not null default now(),
+  locked_until timestamptz
+);
+alter table login_throttle enable row level security;
+-- No policies at all = no client access whatsoever, service role only.
 
 alter table album_photos enable row level security;
 alter table story_submissions enable row level security;

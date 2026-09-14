@@ -16,8 +16,8 @@ export function useChapters() {
     if (!SUPABASE_ENABLED) return;
     supabase
       .from("chapters")
-      .select("id, title, description, num, body, variant, diary_anchor, author, created_at, updated_at")
-      .order("created_at", { ascending: true })
+      .select("id, title, description, num, body, variant, diary_anchor, author, position, created_at, updated_at")
+      .order("position", { ascending: true, nullsFirst: false })
       .then(({ data, error }) => {
         if (!error && data) setEntries(data);
       });
@@ -32,7 +32,35 @@ export function useChapters() {
         .insert({ title, description: description || null, num: num || null, body, author: author || null })
         .select()
         .single();
-      if (!error && data) setEntries((prev) => [...prev, data]);
+      if (!error && data) {
+        const nextPosition = data.position ?? Date.now();
+        setEntries((prev) => [...prev, { ...data, position: nextPosition }]);
+        if (data.position == null) {
+          supabase.from("chapters").update({ position: nextPosition }).eq("id", data.id).then(() => {});
+        }
+      }
+      return { ok: !error, error };
+    } finally {
+      setSaving(false);
+    }
+  }, []);
+
+  // Drag-and-drop reorder in ChapterManager.jsx: takes the new row order
+  // (array of ids) and persists 1-based positions for all of them in one
+  // batch, optimistic-updating local state first so the drag doesn't snap
+  // back while the writes are in flight.
+  const reorderEntries = useCallback(async (orderedIds) => {
+    if (!SUPABASE_ENABLED) return { ok: false, error: null };
+    setEntries((prev) => {
+      const byId = new Map(prev.map((entry) => [entry.id, entry]));
+      return orderedIds.map((id, index) => ({ ...byId.get(id), position: index + 1 }));
+    });
+    setSaving(true);
+    try {
+      const results = await Promise.all(
+        orderedIds.map((id, index) => supabase.from("chapters").update({ position: index + 1 }).eq("id", id))
+      );
+      const error = results.find((r) => r.error)?.error || null;
       return { ok: !error, error };
     } finally {
       setSaving(false);
@@ -74,5 +102,5 @@ export function useChapters() {
     }
   }, []);
 
-  return { entries, saving, addEntry, updateEntry, deleteEntry };
+  return { entries, saving, addEntry, updateEntry, deleteEntry, reorderEntries };
 }

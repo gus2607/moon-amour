@@ -19,6 +19,11 @@ export default function DiaryPrompt({ auth, storySubmissions, legacyUpload, lega
   const [text, setText] = useState("");
   const [sent, setSent] = useState(false);
 
+  // Only the "+" trigger hides once denied — an already-open modal stays
+  // mounted so AuthGate can still show the denial message instead of the
+  // whole thing vanishing mid-explanation.
+  if (auth.denied && !open) return null;
+
   async function handleFiles(files) {
     const { added } = await storySubmissions.submitFiles(files);
     if (added > 0) setSent(true);
@@ -36,15 +41,17 @@ export default function DiaryPrompt({ auth, storySubmissions, legacyUpload, lega
 
   return (
     <div className="diary-prompt">
-      <button
-        type="button"
-        className="add-memory-btn"
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        aria-label="Ayúdame a contar nuestra historia"
-      >
-        +
-      </button>
+      {!auth.denied && (
+        <button
+          type="button"
+          className="add-memory-btn"
+          onClick={() => setOpen(true)}
+          aria-haspopup="dialog"
+          aria-label="Ayúdame a contar nuestra historia"
+        >
+          +
+        </button>
+      )}
 
       {open && (
         <Modal titleId="diary-modal-title" title="Nuestro diario" onClose={() => setOpen(false)}>
