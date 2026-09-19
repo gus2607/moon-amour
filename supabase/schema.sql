@@ -18,6 +18,11 @@ create table if not exists album_photos (
   created_at timestamptz not null default now()
 );
 
+-- `hidden` lets the Galería tab (ChapterManager.jsx) pull a photo/video out
+-- of the public carousel without deleting the row/file — the public Gallery
+-- query filters on this. Safe to re-run on an existing table.
+alter table album_photos add column if not exists hidden boolean not null default false;
+
 -- Diario: todo lo que entra aquí queda pendiente hasta que Gustavo lo
 -- revise. `type` incluye 'text' para entradas sin archivo (solo el campo
 -- `note`) — storage_path es opcional en ese caso.
@@ -74,6 +79,35 @@ update chapters set position = ranked.rn
 from ranked
 where chapters.id = ranked.id and chapters.position is null;
 
+-- Música de fondo (VinylPlayer.jsx) — solo guarda el video_id de YouTube,
+-- nunca el archivo: se reproduce vía el iframe de YouTube (oculto), así que
+-- no hay descarga/subida de audio de por medio. `title` se resuelve una vez
+-- al agregar la canción (oEmbed público de YouTube, ver controller/youtube.js)
+-- y queda cacheado en la fila. Mismo modelo que chapters/album_photos: sin
+-- dueño-por-fila, cualquiera de las dos cuentas administra cualquier fila.
+create table if not exists songs (
+  id uuid primary key default gen_random_uuid(),
+  video_id text not null,
+  title text,
+  hidden boolean not null default false,
+  position integer,
+  created_at timestamptz not null default now()
+);
+alter table songs enable row level security;
+
+drop policy if exists "anyone can read songs" on songs;
+create policy "anyone can read songs" on songs
+  for select using (true);
+drop policy if exists "authenticated users insert songs" on songs;
+create policy "authenticated users insert songs" on songs
+  for insert with check (auth.role() = 'authenticated');
+drop policy if exists "authenticated users update songs" on songs;
+create policy "authenticated users update songs" on songs
+  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "authenticated users delete songs" on songs;
+create policy "authenticated users delete songs" on songs
+  for delete using (auth.role() = 'authenticated');
+
 -- Server-side counter for supabase/functions/login-attempt — keeps the
 -- 3-attempt lockout real (a page reload can't reset it, unlike client-only
 -- state) and caps how many times a script hitting the function directly
@@ -113,6 +147,15 @@ create policy "authenticated users insert album" on album_photos
 drop policy if exists "anyone can read album" on album_photos;
 create policy "anyone can read album" on album_photos
   for select using (true);
+-- Ocultar/quitar desde la pestaña Galería (ChapterManager.jsx) — cualquiera
+-- de las dos cuentas puede editar (el flag `hidden`) o borrar cualquier fila,
+-- mismo modelo sin dueño-por-fila que chapters.
+drop policy if exists "authenticated users update album" on album_photos;
+create policy "authenticated users update album" on album_photos
+  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+drop policy if exists "authenticated users delete album" on album_photos;
+create policy "authenticated users delete album" on album_photos
+  for delete using (auth.role() = 'authenticated');
 
 drop policy if exists "authenticated users insert story" on story_submissions;
 create policy "authenticated users insert story" on story_submissions
@@ -137,6 +180,9 @@ create policy "authenticated users upload to album bucket" on storage.objects
 drop policy if exists "anyone can read album bucket" on storage.objects;
 create policy "anyone can read album bucket" on storage.objects
   for select using (bucket_id = 'album');
+drop policy if exists "authenticated users delete from album bucket" on storage.objects;
+create policy "authenticated users delete from album bucket" on storage.objects
+  for delete using (bucket_id = 'album' and auth.role() = 'authenticated');
 
 drop policy if exists "authenticated users upload to story bucket" on storage.objects;
 create policy "authenticated users upload to story bucket" on storage.objects

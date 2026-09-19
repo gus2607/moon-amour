@@ -10,12 +10,14 @@ import { useUploadedMedia } from "./controller/useUploadedMedia.js";
 import { useAuth } from "./controller/useAuth.js";
 import { useStorySubmissions } from "./controller/useStorySubmissions.js";
 import { useChapters } from "./controller/useChapters.js";
+import { useSongs } from "./controller/useSongs.js";
 
 import Hero from "./view/Hero.jsx";
 import Chapter from "./view/Chapter.jsx";
 import DiaryPrompt from "./view/DiaryPrompt.jsx";
 import Gallery from "./view/Gallery.jsx";
 import ChapterManager from "./view/ChapterManager.jsx";
+import VinylPlayer from "./view/VinylPlayer.jsx";
 import LetterSection from "./view/LetterSection.jsx";
 import Closing from "./view/Closing.jsx";
 import ScrollBackground from "./view/ScrollBackground.jsx";
@@ -67,9 +69,12 @@ export default function App() {
   // gate on Supabase Auth (req #4 — only the two accounts Gustavo creates
   // can sign in) via AuthGate.
   const auth = useAuth();
-  const { items: uploaded, addFiles, uploading } = useUploadedMedia();
+  const { items: uploaded, addFiles, uploading, setHidden, removeItem } = useUploadedMedia();
+  const visibleUploaded = useMemo(() => uploaded.filter((item) => !item.hidden), [uploaded]);
   const storySubmissions = useStorySubmissions();
   const chaptersData = useChapters();
+  const songsData = useSongs();
+  const visibleSongs = useMemo(() => songsData.entries.filter((entry) => !entry.hidden), [songsData.entries]);
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(toastTimerRef.current), []);
@@ -106,7 +111,13 @@ export default function App() {
       <ScrollBackground background={background} />
       <ThreeBackground paintingsRef={paintingsRef} />
       <div aria-hidden="true" className="painting-vignette" />
-      <ChapterManager auth={auth} chapters={chaptersData} />
+      <ChapterManager
+        auth={auth}
+        chapters={chaptersData}
+        album={{ items: uploaded, setHidden, removeItem, addFiles: handleUpload, uploading }}
+        songs={songsData}
+      />
+      <VinylPlayer songs={visibleSongs} />
 
       <Hero content={hero} countdown={timeSince} ref={sectionRefs.hero} />
       {timelineChapters.map((chapter) => {
@@ -127,7 +138,7 @@ export default function App() {
       })}
       <Gallery
         content={gallery}
-        uploaded={uploaded}
+        uploaded={visibleUploaded}
         onUpload={handleUpload}
         uploading={uploading}
         auth={auth}

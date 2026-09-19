@@ -37,6 +37,16 @@ async function dbPut(record) {
   });
 }
 
+async function dbDelete(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // Downscales + recompresses an image client-side so a full-resolution phone
 // photo doesn't bloat IndexedDB or the carousel. Videos pass through
 // untouched — real client-side transcoding isn't practical in-browser
@@ -144,5 +154,25 @@ function useLocalUploadedMedia() {
     }
   }, []);
 
-  return { items, addFiles, uploading };
+  // Local-only mirror of useAlbumMedia's hidden/delete so ChapterManager's
+  // Galería tab works the same on both backends (device never syncs, but
+  // the shape stays identical for the caller).
+  const setHidden = useCallback(async (id, hidden) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, hidden } : item)));
+    const record = await dbGetAll().then((records) => records.find((r) => r.id === id));
+    if (record) await dbPut({ ...record, hidden }).catch(() => {});
+    return { ok: true };
+  }, []);
+
+  const removeItem = useCallback(async (id) => {
+    setItems((prev) => {
+      const item = prev.find((entry) => entry.id === id);
+      if (item?.url) URL.revokeObjectURL(item.url);
+      return prev.filter((entry) => entry.id !== id);
+    });
+    await dbDelete(id).catch(() => {});
+    return { ok: true };
+  }, []);
+
+  return { items, addFiles, uploading, setHidden, removeItem };
 }

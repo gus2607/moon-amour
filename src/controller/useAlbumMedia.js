@@ -13,7 +13,9 @@ function toItem(row) {
     id: row.id,
     type: row.type,
     url: publicUrl(row.storage_path),
+    storagePath: row.storage_path,
     name: row.caption || "",
+    hidden: Boolean(row.hidden),
   };
 }
 
@@ -24,6 +26,10 @@ function toItem(row) {
 // docs/BACKEND_PLAN.md requirement #2. Upload itself still requires being
 // signed in (RLS on the insert checks auth.role()) — the caller is expected
 // to gate the upload UI on useAuth() status, this hook doesn't re-check it.
+//
+// `items` includes hidden rows too — Gallery.jsx (public carousel) filters
+// those out itself; the Galería admin tab (ChapterManager.jsx) needs to see
+// and toggle them, so filtering here would hide that control surface.
 export function useAlbumMedia() {
   const [items, setItems] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -32,7 +38,7 @@ export function useAlbumMedia() {
     if (!SUPABASE_ENABLED) return;
     supabase
       .from("album_photos")
-      .select("id, storage_path, type, caption, created_at")
+      .select("id, storage_path, type, caption, hidden, created_at")
       .order("created_at", { ascending: true })
       .then(({ data, error }) => {
         if (!error && data) setItems(data.map(toItem));
@@ -65,5 +71,31 @@ export function useAlbumMedia() {
     }
   }, []);
 
-  return { items, addFiles, uploading };
+  // Toggle from the Galería admin tab — pulls a photo/video out of the
+  // public carousel without deleting it, so it can be brought back later.
+  const setHidden = useCallback(async (id, hidden) => {
+    if (!SUPABASE_ENABLED) return { ok: false };
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, hidden } : item)));
+    const { error } = await supabase.from("album_photos").update({ hidden }).eq("id", id);
+    if (error) {
+      // revert the optimistic flip if the write didn't actually land
+      setItems((prev) => prev.map((item) => (item.id === id ? { ...item, hidden: !hidden } : item)));
+    }
+    return { ok: !error, error };
+  }, []);
+
+  // Permanent removal — deletes the row and its file in the bucket. Storage
+  // deletion is best-effort: if it fails (e.g. already gone) the row is
+  // still removed so the item disappears everywhere either way.
+  const removeItem = useCallback(async (id) => {
+    if (!SUPABASE_ENABLED) return { ok: false };
+    const item = items.find((entry) => entry.id === id);
+    const { error } = await supabase.from("album_photos").delete().eq("id", id);
+    if (error) return { ok: false, error };
+    setItems((prev) => prev.filter((entry) => entry.id !== id));
+    if (item?.storagePath) supabase.storage.from(BUCKET).remove([item.storagePath]).then(() => {});
+    return { ok: true, error: null };
+  }, [items]);
+
+  return { items, addFiles, uploading, setHidden, removeItem };
 }
