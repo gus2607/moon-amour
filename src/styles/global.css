@@ -885,6 +885,14 @@ p{ margin:0; }
   font-size:0.95rem;
   cursor:pointer;
 }
+.vinyl-shuffle-btn{
+  opacity:0.5;
+}
+.vinyl-shuffle-active{
+  opacity:1;
+  border-color:rgba(232,147,91,0.6);
+  background:rgba(232,147,91,0.18);
+}
 
 /* Success toast after an upload — a small glass pill that rises in and
    fades out on its own; role="status"/aria-live on its wrapper announces

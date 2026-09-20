@@ -22,6 +22,15 @@ function postToPlayer(iframe, func) {
   iframe?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args: [] }), YT_ORIGIN);
 }
 
+function shuffleIds(ids) {
+  const copy = [...ids];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
 // Only the codes that actually mean "this video won't play here" — not an
 // exhaustive list of YouTube's player error codes.
 const ERROR_MESSAGES = {
@@ -35,21 +44,63 @@ const ERROR_MESSAGES = {
 // Fixed top-left vinyl (mirrors ChapterManager's top-right admin button).
 // The actual audio is a 0x0 YouTube iframe — invisible, but still a real
 // video decode, so it stays mounted only while there's at least one song.
-// Hover reveals the title + prev/play/next panel; on touch (no hover),
-// tapping the disc toggles the panel open the same way play/pause does.
-// `isAdmin` only controls whether a failed-song notice is shown — every
-// visitor sees and hears the same playlist either way.
+// Hover reveals the title + shuffle/prev/play/next panel; on touch (no
+// hover), tapping the disc toggles the panel open the same way play/pause
+// does. `isAdmin` only controls whether a failed-song notice is shown —
+// every visitor sees, hears and can shuffle the same playlist either way.
 export default function VinylPlayer({ songs, isAdmin }) {
   const iframeRef = useRef(null);
   const indexRef = useRef(0);
   const playingRef = useRef(false);
-  const songsRef = useRef(songs);
-  songsRef.current = songs;
+  const playlistRef = useRef([]);
+  const currentIdRef = useRef(null);
 
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
   const [adminNotice, setAdminNotice] = useState(null);
+
+  // Random order on every load by default; the shuffle button flips back to
+  // the admin's own fixed drag-to-reorder order from the Canciones tab.
+  const [shuffled, setShuffled] = useState(true);
+  const [order, setOrder] = useState(() => shuffleIds(songs.map((s) => s.id)));
+  const prevShuffledRef = useRef(shuffled);
+
+  // Rebuilds `order` whenever the song list changes (admin added/hid one)
+  // or shuffle is toggled — a fresh full reshuffle only on the on-toggle
+  // transition, otherwise existing order is kept and only new songs are
+  // shuffled in, so playback isn't disrupted by an unrelated admin edit.
+  useEffect(() => {
+    const currentIds = songs.map((s) => s.id);
+    const justToggledOn = shuffled && !prevShuffledRef.current;
+    prevShuffledRef.current = shuffled;
+
+    setOrder((prev) => {
+      if (!shuffled) return currentIds;
+      if (justToggledOn) return shuffleIds(currentIds);
+      const existing = prev.filter((id) => currentIds.includes(id));
+      const added = currentIds.filter((id) => !existing.includes(id));
+      return [...existing, ...shuffleIds(added)];
+    });
+  }, [songs, shuffled]);
+
+  const playlist = useMemo(() => {
+    const byId = new Map(songs.map((s) => [s.id, s]));
+    return order.map((id) => byId.get(id)).filter(Boolean);
+  }, [order, songs]);
+  playlistRef.current = playlist;
+
+  // Whenever the effective playlist changes (shuffle toggled, or the admin
+  // added/hid a song), keep pointing at whichever song was already loaded
+  // instead of jumping to a different track — falls back to the first one
+  // if it's no longer in the list at all.
+  useEffect(() => {
+    const found = playlist.findIndex((s) => s.id === currentIdRef.current);
+    const resolved = found === -1 ? 0 : found;
+    indexRef.current = resolved;
+    currentIdRef.current = playlist[resolved]?.id ?? null;
+    setIndex(resolved);
+  }, [playlist]);
 
   function setPlayingState(value) {
     playingRef.current = value;
@@ -57,10 +108,11 @@ export default function VinylPlayer({ songs, isAdmin }) {
   }
 
   function goTo(nextIndex) {
-    const list = songsRef.current;
+    const list = playlistRef.current;
     if (list.length === 0) return;
     const wrapped = ((nextIndex % list.length) + list.length) % list.length;
     indexRef.current = wrapped;
+    currentIdRef.current = list[wrapped].id;
     setIndex(wrapped);
   }
   const goNext = () => goTo(indexRef.current + 1);
@@ -82,7 +134,7 @@ export default function VinylPlayer({ songs, isAdmin }) {
         return;
       }
       if (data.event === "onError") {
-        const song = songsRef.current[indexRef.current];
+        const song = playlistRef.current[indexRef.current];
         setAdminNotice(
           `"${song?.title || "Esta canción"}" no sonó (${ERROR_MESSAGES[data.info] || `error ${data.info}`}) — pasando a la siguiente.`
         );
@@ -95,17 +147,7 @@ export default function VinylPlayer({ songs, isAdmin }) {
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
-  // If the playlist shrinks (an item got hidden/deleted) out from under the
-  // current index, snap back to the first track instead of pointing past
-  // the end of the array.
-  useEffect(() => {
-    if (index >= songs.length && songs.length > 0) {
-      indexRef.current = 0;
-      setIndex(0);
-    }
-  }, [songs.length, index]);
-
-  const current = songs[index] ?? null;
+  const current = playlist[index] ?? null;
   // Recomputed only when the track itself changes (not on every play/pause
   // toggle) — reads playingRef at that moment so skipping tracks mid-playback
   // keeps playing, while a fresh page load or a paused skip doesn't autoplay.
@@ -150,6 +192,16 @@ export default function VinylPlayer({ songs, isAdmin }) {
         <p className="vinyl-panel-title">{current.title || "Nuestra música"}</p>
         {isAdmin && adminNotice && <p className="vinyl-admin-notice">⚠ {adminNotice}</p>}
         <div className="vinyl-panel-controls">
+          <button
+            type="button"
+            className={shuffled ? "vinyl-shuffle-btn vinyl-shuffle-active" : "vinyl-shuffle-btn"}
+            onClick={() => setShuffled((s) => !s)}
+            aria-pressed={shuffled}
+            aria-label={shuffled ? "Desactivar orden aleatorio" : "Activar orden aleatorio"}
+            title={shuffled ? "Orden aleatorio activado" : "Orden fijo"}
+          >
+            🔀
+          </button>
           <button type="button" onClick={goPrev} aria-label="Canción anterior">
             ⏮
           </button>
