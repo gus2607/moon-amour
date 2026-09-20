@@ -105,12 +105,18 @@ export default function VinylPlayer({ songs, isAdmin }) {
     }
   }, [songs.length, index]);
 
-  if (songs.length === 0) return null;
-  const current = songs[index];
+  const current = songs[index] ?? null;
   // Recomputed only when the track itself changes (not on every play/pause
   // toggle) — reads playingRef at that moment so skipping tracks mid-playback
   // keeps playing, while a fresh page load or a paused skip doesn't autoplay.
-  const src = useMemo(() => embedSrc(current.video_id, { autoplay: playingRef.current }), [current.id]);
+  // Hooks must run unconditionally on every render, so this — and every
+  // other hook — stays above the songs.length===0 early return below.
+  const src = useMemo(
+    () => (current ? embedSrc(current.video_id, { autoplay: playingRef.current }) : ""),
+    [current?.id]
+  );
+
+  if (songs.length === 0 || !current) return null;
 
   return (
     <div
