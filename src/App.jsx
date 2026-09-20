@@ -117,7 +117,7 @@ export default function App() {
         album={{ items: uploaded, setHidden, removeItem, addFiles: handleUpload, uploading }}
         songs={songsData}
       />
-      <VinylPlayer songs={visibleSongs} />
+      <VinylPlayer songs={visibleSongs} isAdmin={Boolean(auth.user)} />
 
       <Hero content={hero} countdown={timeSince} ref={sectionRefs.hero} />
       {timelineChapters.map((chapter) => {
