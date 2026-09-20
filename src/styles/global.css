@@ -877,21 +877,35 @@ p{ margin:0; }
   gap:10px;
 }
 .vinyl-panel-controls button{
-  padding:6px 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 14px;
   border-radius:999px;
   border:1px solid var(--glass-border);
   background:var(--glass-bg);
   color:var(--parchment);
-  font-size:0.95rem;
+  font-size:1.05rem;
   cursor:pointer;
+  transition:color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+@media (hover:hover){
+  .vinyl-panel-controls button:hover{
+    color:var(--amber-300);
+    border-color:rgba(232,147,91,0.5);
+  }
 }
 .vinyl-shuffle-btn{
-  opacity:0.5;
+  opacity:0.55;
 }
 .vinyl-shuffle-active{
   opacity:1;
+  color:var(--amber-300);
   border-color:rgba(232,147,91,0.6);
   background:rgba(232,147,91,0.18);
+}
+@media (prefers-reduced-motion: reduce){
+  .vinyl-panel-controls button{ transition:none; }
 }
 
 /* Success toast after an upload — a small glass pill that rises in and

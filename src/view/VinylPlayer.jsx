@@ -31,6 +31,50 @@ function shuffleIds(ids) {
   return copy;
 }
 
+// Thin line-art controls instead of emoji — currentColor so they inherit
+// the button's own text color (and its hover/active states) for free, sized
+// in em so they scale with .vinyl-panel-controls' own font-size.
+function IconShuffle() {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">
+      <path
+        d="M4 6h3.3c1.4 0 2.3.6 3 1.7l5.4 8.6c.7 1.1 1.6 1.7 3 1.7H21M4 18h3.3c1.4 0 2.3-.6 3-1.7l.6-1M15.7 7.7c.7-1.1 1.6-1.7 3-1.7H21"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M18 3.5l3 3-3 3M18 14.5l3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconSkip({ flipped }) {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true" style={flipped ? { transform: "scaleX(-1)" } : undefined}>
+      <path d="M6 5v14l10-7-10-7z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M18 5v14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPlay() {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">
+      <path d="M7 4.5v15l13-7.5-13-7.5z" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconPause() {
+  return (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" aria-hidden="true">
+      <path d="M8 5v14M16 5v14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Only the codes that actually mean "this video won't play here" — not an
 // exhaustive list of YouTube's player error codes.
 const ERROR_MESSAGES = {
@@ -200,16 +244,16 @@ export default function VinylPlayer({ songs, isAdmin }) {
             aria-label={shuffled ? "Desactivar orden aleatorio" : "Activar orden aleatorio"}
             title={shuffled ? "Orden aleatorio activado" : "Orden fijo"}
           >
-            🔀
+            <IconShuffle />
           </button>
           <button type="button" onClick={goPrev} aria-label="Canción anterior">
-            ⏮
+            <IconSkip flipped />
           </button>
           <button type="button" onClick={togglePlay} aria-label={playing ? "Pausar" : "Reproducir"}>
-            {playing ? "⏸" : "▶"}
+            {playing ? <IconPause /> : <IconPlay />}
           </button>
           <button type="button" onClick={goNext} aria-label="Siguiente canción">
-            ⏭
+            <IconSkip />
           </button>
         </div>
       </div>
